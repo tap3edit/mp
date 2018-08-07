@@ -1,0 +1,43 @@
+2015.01.24 00:00  Javier Gutierrez
+
+	* Improved: Added documentation as HTML
+
+	* Improved: Added examples
+
+    New release 0.02
+
+2014.12.31 00:00  Javier Gutierrez
+
+	* Improved: Support for threads (pthreads and Windows threads)
+
+	* Improved: Better handling of global variables for threads
+
+	* Fixed: Total Phisical Memory not counted
+
+2014.08.30 00:00  Javier Gutierrez
+
+	* Improved: Added file descriptor to configurable trace function
+
+	* Improved: Better comments
+
+	* Improved: Better dumping memory logic. Null bytes are skipped.
+
+	* Improved: Support for MVSC
+
+	* Improved: Support for valgrind
+
+2014.08.30 00:00  Javier Gutierrez
+
+	* Improved: Added unit test
+
+	* Improved: New directory structure
+
+	* Improved: Added ChangeLog
+
+    * Fixed: Avoid losing 8 bytes for each new allocation
+
+2014.08.16 00:00  Javier Gutierrez
+
+    * Report: Initial version
+
+    New release 0.01

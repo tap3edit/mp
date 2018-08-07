@@ -1,0 +1,1929 @@
+/****************************************************************************
+|*
+|* tap3edit Tools (http://www.tap3edit.com)
+|*
+|* $Id: ut_mp.check 63 2015-01-03 22:18:39Z mrjones $
+|*
+|* Copyright (c) 2014, Javier Gutierrez <jgutierrez@tap3edit.com>
+|* 
+|* Permission to use, copy, modify, and/or distribute this software for any
+|* purpose with or without fee is hereby granted, provided that the above
+|* copyright notice and this permission notice appear in all copies.
+|* 
+|* THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+|* WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+|* MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+|* ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+|* WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+|* ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+|* OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+|*
+|*
+|* Module: ut_mp.check
+|*
+|* Description: Memory pool management unit test
+|*
+|* Author: Javier Gutierrez (JG)
+|*
+|* Modifications:
+|*
+|* When         Who     Pos     What
+|* 20140830     JG              Initial version
+|*
+****************************************************************************/
+#include "mp.c"
+
+#if MP_THREAD_SAFE == 1 /* { */
+typedef struct args_t
+{
+    int mpid;
+    int mperrno;
+    int rc;
+    int (* fn)(int mpid);
+} args_t;
+
+void *mp_thread_fn(void *arg)
+{
+    args_t *a = (args_t *)arg;
+
+    if (a->fn == NULL)
+    {
+        ck_abort_msg("Null argument");
+    }
+
+    a->rc = (*a->fn)(a->mpid);
+    a->mperrno = mperrno;
+    
+    return 0;
+}
+#endif /* } MP_THREAD_SAFE */
+
+#suite Memory Pool Main Logic
+
+#test mpadd_block_def_mpid_not_init
+    int mpid = MP_DEF_MP_ID;
+    size_t align = MP_DEF_ALIGN;
+    char *ptr = NULL;
+
+    mp_arr[mpid].init = 'N';
+    ptr = (char *)mpadd_block(0, mpid, align);
+    if (ptr == NULL)
+    {
+        ck_abort_msg("Function returned a NULL pointer");
+    }
+
+    ck_assert_msg( 
+        mp_arr[mpid].init == 'Y' 
+    , "Default mpid should be initialized");
+
+    ck_assert_msg(
+        strcmp(mp_arr[mpid].descr, MP_DEF_MP_DESCR) == 0
+    , "Default mpid description should be \"%s\", but it's \"%s\"", MP_DEF_MP_DESCR, mp_arr[mpid].descr);
+
+#test mpadd_block_mpid_not_init
+    int mpid = MP_DEF_MP_ID + 2;
+    size_t align = MP_DEF_ALIGN;
+
+    mp_arr[mpid].init = 'N';
+    ck_assert_msg(
+        mpadd_block(0, mpid, align) == NULL
+    , "mpid was no initialized but mpadd_block() delivered not NULL");
+
+    mp_arr[mpid].init = 'N';
+    ck_assert_msg(
+        mpadd_block(0, mpid, align) == NULL &&
+        mperrno == MP_ERRNO_NOIN
+    , "mpid was no initialized but mperrno was not MP_ERRNO_NOIN, it was %d instead", mperrno);
+
+#test mpadd_block_set_mem_limit
+    int mpid = MP_DEF_MP_ID;
+    size_t align = MP_DEF_ALIGN;
+
+    mp_mem_limit = 0;
+    if (mpadd_block(0, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding block");
+    }
+        
+    if (sizeof(size_t) > 4)
+    {
+        ck_assert_msg(
+            mp_mem_limit == MP_DEF_MEM_LIMIT_64
+            , "Memory limit is not MP_DEF_MEM_LIMIT_64");
+    }
+    else
+    {
+        ck_assert_msg(
+            mp_mem_limit == MP_DEF_MEM_LIMIT_32
+            , "Memory limit is not MP_DEF_MEM_LIMIT_32");
+    }
+
+#test mpadd_block_check_mem_limit
+    int mpid = MP_DEF_MP_ID;
+    size_t align = MP_DEF_ALIGN;
+    char *ptr = NULL;
+
+    mp_mem_limit = 0;
+    if (sizeof(size_t) > 4)
+    {
+        ptr = (char *)mpadd_block(MP_DEF_MEM_LIMIT_64 + 1, mpid, align);
+        ck_assert_msg(
+            ptr == NULL
+            , "Memory limit is exceeded and mpadd_block() didn't deliver NULL");
+
+        ck_assert_msg(
+            mperrno == MP_ERRNO_EXMM
+            , "Memory limit is exceeded and mperrno is not MP_ERRNO_EXMM, it was %d instead", mperrno);
+    }
+    else
+    {
+        ptr = (char *)mpadd_block(MP_DEF_MEM_LIMIT_32 + 1, mpid, align);
+        ck_assert_msg(
+            ptr == NULL
+            , "Memory limit is exceeded and mpadd_block() didn't deliver NULL");
+
+        ck_assert_msg(
+            mperrno == MP_ERRNO_EXMM
+            , "Memory limit is exceeded and mperrno is not MP_ERRNO_EXMM, it was %d instead", mperrno);
+    }
+
+/* Check malloc() */
+
+#test mpadd_block_def_block_size
+    int mpid = MP_DEF_MP_ID + 3;
+    size_t align = MP_DEF_ALIGN;
+    size_t blksz = MP_DEF_BLK_SZ;
+
+    mp_arr[mpid].init = 'Y';
+
+    if (mpadd_block(0, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding block: %s", mpstrerror());
+    }
+
+    if (mp_arr[mpid].head_block == NULL)
+    {
+        ck_abort_msg("Error the head block is NULL");
+    }
+        
+    ck_assert_msg(
+        mp_arr[mpid].head_block->size == blksz + align -1
+        , "Allocated memory block not of default size MP_DEF_BLK_SZ");
+
+#test mpadd_block_diff_block_size
+    int mpid = MP_DEF_MP_ID + 4;
+    size_t align = MP_DEF_ALIGN;
+    size_t blksz = MP_DEF_BLK_SZ + (align * 4);
+
+    mp_arr[mpid].init = 'Y';
+    if (mpadd_block(blksz, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding block: %s", mpstrerror());
+    }
+        
+    if (mp_arr[mpid].head_block == NULL)
+    {
+        ck_abort_msg("Error the head block is NULL");
+    }
+
+    ck_assert_msg(
+        mp_arr[mpid].head_block->size == blksz + align -1
+        , "Allocated memory block not of the assigned size");
+
+#test mpadd_block_alignment
+    int mpid = MP_DEF_MP_ID + 5;
+    size_t align = MP_DEF_ALIGN;
+
+    mp_arr[mpid].init = 'Y';
+    if (mpadd_block(0, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding block: %s", mpstrerror());
+    }
+        
+    if (mp_arr[mpid].head_block == NULL)
+    {
+        ck_abort_msg("Error the head block is NULL");
+    }
+
+    ck_assert_msg(
+        ((uintptr_t)mp_arr[mpid].head_block->block + mp_arr[mpid].head_block->used) % align == 0
+        , "Allocated memory block is not aligned");
+
+#test mpadd_block_block_next
+    int mpid = MP_DEF_MP_ID + 6;
+    size_t align = MP_DEF_ALIGN;
+
+    mp_arr[mpid].init = 'Y';
+    if (mpadd_block(0, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding block: %s", mpstrerror());
+    }
+        
+    if (mp_arr[mpid].head_block == NULL)
+    {
+        ck_abort_msg("Error the head block is NULL");
+    }
+
+    ck_assert_msg(
+        mp_arr[mpid].head_block->next == NULL
+        , "Next block of just created block is not NULL");
+
+#test mpadd_block_head_tail
+    int mpid = MP_DEF_MP_ID + 7;
+    size_t align = MP_DEF_ALIGN;
+
+    mp_arr[mpid].init = 'Y';
+    if (mpadd_block(0, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding block: %s", mpstrerror());
+    }
+        
+    if (mp_arr[mpid].head_block == NULL)
+    {
+        ck_abort_msg("Error the head block is NULL");
+    }
+
+    ck_assert_msg(
+        mp_arr[mpid].head_block == mp_arr[mpid].tail_block
+        , "Next block of just created block is not NULL");
+
+#test mpadd_block_set_tot_phy_mem
+    int mpid = MP_DEF_MP_ID;
+    size_t align = MP_DEF_ALIGN;
+    size_t blksz = MP_DEF_BLK_SZ;
+
+    if (mp_tot_phy_mem != 0)
+    {
+        ck_abort_msg("Initial total physical memory is not zero but <%ld>", mp_tot_phy_mem);
+    }
+
+    mp_arr[mpid].init = 'Y';
+    if (mpadd_block(0, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding block: %s", mpstrerror());
+    }
+
+    if (mp_arr[mpid].head_block == NULL)
+    {
+        ck_abort_msg("Error the head block is NULL");
+    }
+        
+    ck_assert_msg(
+        mp_tot_phy_mem == blksz + align -1
+        , "Total physical memory used is not incremented to the used value <%ld> but it is <%ld>", blksz + align -1, mp_tot_phy_mem);
+
+    mpid++;
+    mp_arr[mpid].init = 'Y';
+    if (mpadd_block(0, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding block: %s", mpstrerror());
+    }
+
+    if (mp_arr[mpid].head_block == NULL)
+    {
+        ck_abort_msg("Error the head block is NULL");
+    }
+        
+    ck_assert_msg(
+        mp_tot_phy_mem == (blksz + align -1) *2
+        , "Total physical memory used is not incremented to the used value <%ld> but it is <%ld>", (blksz + align -1) *2, mp_tot_phy_mem);
+
+#test mpget_chunk_mpid_not_in_range
+    int mpid = -1;
+    size_t align = MP_DEF_ALIGN;
+    char *ptr = NULL;
+
+    ptr = (char *)mpget_chunk(0, mpid, align);
+    ck_assert_msg(
+        ptr == NULL
+        , "mpget_chunk() did not return NULL");
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_MPID
+        , "mpget_chunk() should set mperrno as MP_ERRNO_MPID, but was set to %d instead", mperrno);
+
+    mpid = MP_MAX_MP_ID;
+    ptr = (char *)mpget_chunk(0, mpid, align);
+    if (ptr != NULL)
+    {
+        ck_abort_msg("The function didn't returned a NULL pointer");
+    }
+    ck_assert_msg(
+        mperrno == MP_ERRNO_MPID
+        , "mpget_chunk() should set mperrno as MP_ERRNO_MPID, but was set to %d instead", mperrno);
+
+    mpid = MP_MAX_MP_ID + 1;
+    ptr = mpget_chunk(0, mpid, align);
+    if (ptr != NULL)
+    {
+        ck_abort_msg("The function didn't returned a NULL pointer");
+    }
+    ck_assert_msg(
+        mperrno == MP_ERRNO_MPID
+        , "mpget_chunk() should set mperrno as MP_ERRNO_MPID, but was set to %d instead", mperrno);
+
+#test mpget_chunk_align_not_in_range
+    char *ptr = NULL;
+    int mpid = MP_DEF_MP_ID;
+    size_t align = sizeof(void *) -1; /* 1. less than size of void */
+
+    ptr = (char *)mpget_chunk(0, mpid, align);
+
+    ck_assert_msg(
+        ptr == NULL
+        , "mpget_chunk() did not return NULL");
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_EXAL
+        , "mpget_chunk() should set mperrno as MP_ERRNO_EXAL, but was set to %d instead", mperrno);
+
+    align = 9; /* 2. not power of 2 */
+    ptr = (char *)mpget_chunk(0, mpid, align);
+
+    ck_assert_msg(
+        ptr == NULL
+        , "mpget_chunk() did not return NULL");
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_EXAL
+        , "mpget_chunk() should set mperrno as MP_ERRNO_EXAL, but was set to %d instead", mperrno);
+
+#test mpget_chunk_thread_check_def_mp
+
+#if MP_THREAD_SAFE == 1
+
+    char *ptr = NULL;
+    int mpid = MP_DEF_MP_ID;
+    size_t align = MP_DEF_ALIGN;
+    mp_arr[mpid].init = 'Y';
+
+    ptr = (char *)mpget_chunk(0, mpid, align);
+
+    ck_assert_msg(
+        ptr == NULL
+        , "mpget_chunk() did not return NULL");
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_THRD
+        , "mpget_chunk() should set mperrno as MP_ERRNO_THRD, but was set to %d instead", mperrno);
+
+    mp_arr[mpid].init = ' ';
+    ptr = (char *)mpget_chunk(0, mpid, align);
+
+    ck_assert_msg(
+        ptr != NULL
+        , "mpget_chunk() did not return NULL: %s", mpstrerror());
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_SUCCESS
+        , "mpget_chunk() should set mperrno as MP_ERRNO_SUCCESS, but was set to %d instead", mperrno);
+#endif
+
+#test mpget_chunk_thread_check_non_def_mp
+
+#if MP_THREAD_SAFE == 1
+
+    char *ptr = NULL;
+    int mpid = MP_DEF_MP_ID + 1;
+    size_t align = MP_DEF_ALIGN;
+    mp_arr[mpid].init = 'Y';
+
+    ptr = (char *)mpget_chunk(0, mpid, align);
+
+    ck_assert_msg(
+        ptr == NULL
+        , "mpget_chunk() did not return NULL");
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_THRD
+        , "mpget_chunk() should set mperrno as MP_ERRNO_THRD, but was set to %d instead", mperrno);
+
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+    ptr = (char *)mpget_chunk(0, mpid, align);
+
+    ck_assert_msg(
+        ptr != NULL
+        , "mpget_chunk() did not return NULL: %s", mpstrerror());
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_SUCCESS
+        , "mpget_chunk() should set mperrno as MP_ERRNO_SUCCESS, but was set to %d instead", mperrno);
+#endif
+
+#test mpget_chunk_used_bytes
+    int mpid = MP_DEF_MP_ID;
+    size_t align = MP_DEF_ALIGN;
+    size_t sz = align * 2;
+    size_t margin = 0;
+    size_t used = 0;
+    size_t prev_used = 0;
+
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    prev_used = mp_arr[mpid].head_block->used;
+
+    if (mpget_chunk(sz, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding block: %s", mpstrerror());
+    }
+
+    margin = align - (prev_used % align);
+    margin = margin == align ? 0 : margin;
+    used = prev_used + margin + sz;
+    ck_assert_msg(
+        mp_arr[mpid].head_block->used == used
+        , "The used bytes in the block was no updated correctly <%zu/%zu>"
+        , mp_arr[mpid].head_block->used, used);
+
+#test mpget_chunk_add_new_block
+    int mpid = MP_DEF_MP_ID + 8;
+    size_t align = MP_DEF_ALIGN;
+    size_t sz = MP_DEF_BLK_SZ + align;
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+
+
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    if (mp_arr[mpid].head_block->next != NULL)
+    {
+        ck_abort_msg("The 'next' pointer to the next block is not NULL and we should have only one block allocated");
+    }
+
+    /* Now we try to allocate a size bigger than the 
+    current memory block so it allocates a new memory
+    block */
+    if (mpget_chunk(sz, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding block");
+    }
+
+    ck_assert_msg(
+        mp_arr[mpid].head_block->next != NULL
+        , "The 'next' pointer to the next block is NULL and we should have now two blocks allocated");
+
+
+#test mpmalloc_call
+    int mpid = MP_DEF_MP_ID + 8;
+    size_t align = MP_DEF_ALIGN;
+    size_t cur_blck_used = 0;
+    mp_cur_mpid = mpid;
+
+    /* We have to make sure that the function 
+    allocates memory from the current mpid */
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    cur_blck_used = mp_arr[mpid].tail_block->used;
+
+    if (mpmalloc(align * 2) == NULL)
+    {
+        ck_abort_msg("Error allocating memory in the current Memory Pool");
+    }
+
+    ck_assert_msg(
+        cur_blck_used != mp_arr[mpid].tail_block->used
+        , "The memory was not allocated in the current block");
+
+#test mpmalloc_mpid_call
+    int mpid = MP_DEF_MP_ID + 8;
+    size_t align = MP_DEF_ALIGN;
+    size_t cur_blck_used = 0;
+
+    /* We have to make sure that the function 
+    allocates memory from the current mpid */
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    cur_blck_used = mp_arr[mpid].tail_block->used;
+
+    if (mpmalloc_mpid(align * 2, mpid) == NULL)
+    {
+        ck_abort_msg("Error allocating memory in specific Memory Pool <%d>", mpid);
+    }
+
+    ck_assert_msg(
+        cur_blck_used != mp_arr[mpid].tail_block->used
+        , "The memory was not allocated in the current block");
+
+#test mpmemalign_call
+    int mpid = MP_DEF_MP_ID + 8;
+    size_t align = MP_DEF_ALIGN;
+    size_t cur_blck_used = 0;
+    mp_cur_mpid = mpid;
+
+    /* We have to make sure that the function 
+    allocates memory from the current mpid */
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    cur_blck_used = mp_arr[mpid].tail_block->used;
+
+    if (mpmemalign(align, align * 2) == NULL)
+    {
+        ck_abort_msg("Error allocating memory in the current Memory Pool");
+    }
+
+    ck_assert_msg(
+        cur_blck_used != mp_arr[mpid].tail_block->used
+        , "The memory was not allocated in the current block");
+
+#test mpmemalign_alignment
+    int mpid = MP_DEF_MP_ID;
+    size_t align = MP_DEF_ALIGN * 3; /* 24 is not power of 2 */
+    char *ptr = NULL;
+
+    mp_cur_mpid = mpid;
+
+    if ((ptr = mpmemalign(align, align)) != NULL)
+    {
+        ck_abort_msg("Trying to allocate memory with alignment not power of 2 <%d> and there is no error", 
+            (int)align);
+    }
+
+    align = MP_DEF_ALIGN * 2;
+    if ((ptr = mpmemalign(align, align)) == NULL)
+    {
+        ck_abort_msg("Error allocating memory: %s", mpstrerror());
+    }
+
+    ck_assert_msg(
+        ((uintptr_t)ptr % align) == 0
+        , "Allocated memory is not aligned with the passed alignment parameter");
+
+#test mpmemalign_mpid_call
+    int mpid = MP_DEF_MP_ID + 8;
+    size_t align = MP_DEF_ALIGN;
+    size_t cur_blck_used = 0;
+
+    /* We have to make sure that the function 
+    allocates memory from the current mpid */
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    cur_blck_used = mp_arr[mpid].tail_block->used;
+
+    if (mpmemalign_mpid(align, align * 2, mpid) == NULL)
+    {
+        ck_abort_msg("Error allocating memory in specific Memory Pool <%d>", mpid);
+    }
+
+    ck_assert_msg(
+        cur_blck_used != mp_arr[mpid].tail_block->used
+        , "The memory was not allocated in the current block");
+
+#test mpmemalign_mpid_alignment
+    int mpid = MP_DEF_MP_ID;
+    size_t align = MP_DEF_ALIGN * 3; /* 24 is not power of 2 */
+    char *ptr = NULL;
+
+    if ((ptr = (char *)mpmemalign_mpid(align, align, mpid)) != NULL)
+    {
+        ck_abort_msg("Function called with alignment not power of 2 <%d> and there is no error",
+            (int)align);
+    }
+
+    align = MP_DEF_ALIGN * 2; /* 16 is power of 2 */
+    if ((ptr = (char *)mpmemalign_mpid(align, align, mpid)) == NULL)
+    {
+        ck_abort_msg("Error allocating memory in a specific Memory Pool <%d>", mpid);
+    }
+
+    ck_assert_msg(
+        ((uintptr_t)ptr % align) == 0
+        , "Allocated memory is not aligned with the passed alignment parameter");
+
+
+#test mpcalloc_call
+    int mpid = MP_DEF_MP_ID + 8;
+    size_t align = MP_DEF_ALIGN;
+    size_t cur_blck_used = 0;
+    mp_cur_mpid = mpid;
+
+    /* We have to make sure that the function 
+    allocates memory from the current mpid */
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    cur_blck_used = mp_arr[mpid].tail_block->used;
+
+    if (mpcalloc(1, align * 2) == NULL)
+    {
+        ck_abort_msg("Error allocating memory in the current Memory Pool");
+    }
+
+    ck_assert_msg(
+        cur_blck_used != mp_arr[mpid].tail_block->used
+        , "The memory was not allocated in the current block");
+
+#test mpcalloc_elements
+    int mpid = MP_DEF_MP_ID + 8;
+    size_t align = MP_DEF_ALIGN;
+    size_t cur_blck_used = 0;
+    size_t margin = 0;
+    size_t sz = align * 2;
+
+    mp_cur_mpid = mpid;
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    cur_blck_used = mp_arr[mpid].tail_block->used;
+    margin = align - (cur_blck_used % align);
+    margin = margin == align ? 0 : margin;
+
+    if (mpcalloc(3, sz) == NULL)
+    {
+        ck_abort_msg("Error allocating memory in the current Memory Pool");
+    }
+
+    ck_assert_msg(
+        mp_arr[mpid].head_block->used == cur_blck_used + margin + (sz * 3)
+        , "The block allocated is not the number of elements times the size");
+
+
+#test mpcalloc_mpid_call
+    int mpid = MP_DEF_MP_ID + 8;
+    size_t align = MP_DEF_ALIGN;
+    size_t cur_blck_used = 0;
+
+    /* We have to make sure that the function 
+    allocates memory from the current mpid */
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    cur_blck_used = mp_arr[mpid].tail_block->used;
+
+    if (mpcalloc_mpid(1, align * 2, mpid) == NULL)
+    {
+        ck_abort_msg("Error allocating memory in specific Memory Pool <%d>", mpid);
+    }
+
+    ck_assert_msg(
+        cur_blck_used != mp_arr[mpid].tail_block->used
+        , "The memory was not allocated in the current block");
+
+#test mpcalloc_mpid_elements
+    int mpid = MP_DEF_MP_ID + 8;
+    size_t align = MP_DEF_ALIGN;
+    size_t cur_blck_used = 0;
+    size_t margin = 0;
+    size_t sz = align * 2;
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    cur_blck_used = mp_arr[mpid].tail_block->used;
+    margin = align - (cur_blck_used % align);
+    margin = margin == align ? 0 : margin;
+
+    if (mpcalloc_mpid(3, sz, mpid) == NULL)
+    {
+        ck_abort_msg("Error allocating memory in a specifiy Memory Pool <%d>", mpid);
+    }
+
+    ck_assert_msg(
+        mp_arr[mpid].head_block->used == cur_blck_used + margin + (sz * 3)
+        , "The block allocated is not the number of elements times the size");
+
+#test mprealloc_call
+    int mpid = MP_DEF_MP_ID + 8;
+    size_t align = MP_DEF_ALIGN;
+    size_t cur_blck_used = 0;
+    mp_cur_mpid = mpid;
+
+    /* We have to make sure that the function 
+    allocates memory from the current mpid */
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    cur_blck_used = mp_arr[mpid].tail_block->used;
+
+    if (mprealloc(NULL, align * 2) == NULL)
+    {
+        ck_abort_msg("Error allocating memory in the current Memory Pool");
+    }
+
+    ck_assert_msg(
+        cur_blck_used != mp_arr[mpid].tail_block->used
+        , "The memory was not allocated in the current block");
+
+#test mprealloc_copy_content
+    int mpid = MP_DEF_MP_ID + 8;
+    size_t align = MP_DEF_ALIGN;
+    char *ptr = NULL;
+    char *ptr2 = NULL;
+
+    mp_cur_mpid = mpid;
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if ((ptr = (char *)mpget_chunk(align * 3, mpid, align)) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    strncpy(ptr, "This is a test", align * 3);
+    ptr[(align * 3) -1] = '\0';
+
+    if ((ptr2 = mprealloc(ptr, align * 2)) == NULL)
+    {
+        ck_abort_msg("Error allocating memory in the current Memory Pool");
+    }
+
+    ck_assert_msg(
+        strcmp(ptr, ptr2) == 0
+        , "The content of the memory was not copied");
+
+#test mprealloc_mpid_call
+    int mpid = MP_DEF_MP_ID + 8;
+    size_t align = MP_DEF_ALIGN;
+    size_t cur_blck_used = 0;
+
+    /* We have to make sure that the function 
+    allocates memory from the current mpid */
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    cur_blck_used = mp_arr[mpid].tail_block->used;
+
+    if (mprealloc_mpid(NULL, align * 2, mpid) == NULL)
+    {
+        ck_abort_msg("Error allocating memory in specific Memory Pool <%d>", mpid);
+    }
+
+    ck_assert_msg(
+        cur_blck_used != mp_arr[mpid].tail_block->used
+        , "The memory was not allocated in the current block");
+
+#test mprealloc_mpid_copy_content
+    int mpid = MP_DEF_MP_ID + 8;
+    size_t align = MP_DEF_ALIGN;
+    char *ptr = NULL;
+    char *ptr2 = NULL;
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if ((ptr = (char *)mpget_chunk(align + 1, mpid, align)) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    strncpy(ptr, "This is a test", align * 3);
+    ptr[(align * 3) -1] = '\0';
+
+    if ((ptr2 = mprealloc_mpid(ptr, align * 2, mpid)) == NULL)
+    {
+        ck_abort_msg("Error allocating memory in specific Memory Pool <%d>", mpid);
+    }
+
+    ck_assert_msg(
+        strcmp(ptr, ptr2) == 0
+        , "The content of the memory was not copied");
+
+#test mpstrdup_call
+    int mpid = MP_DEF_MP_ID + 8;
+    size_t align = MP_DEF_ALIGN;
+    size_t cur_blck_used = 0;
+    char * ptr = NULL;
+
+    mp_cur_mpid = mpid;
+
+    /* We have to make sure that the function 
+    allocates memory from the current mpid */
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    cur_blck_used = mp_arr[mpid].tail_block->used;
+
+    if ((ptr = mpstrdup("This is another test")) == NULL)
+    {
+        ck_abort_msg("Error allocating memory in the current Memory Pool");
+    }
+
+    ck_assert_msg(
+        cur_blck_used != mp_arr[mpid].tail_block->used
+        , "The memory was not allocated in the current block");
+
+    ck_assert_msg(
+        strcmp(ptr, "This is another test") == 0
+        , "The string was not duplciated");
+
+
+#test mpstrdup_mpid_call
+    int mpid = MP_DEF_MP_ID;
+    size_t align = MP_DEF_ALIGN;
+    size_t cur_blck_used = 0;
+    char * ptr = NULL;
+
+    /* We have to make sure that the function 
+    allocates memory from the current mpid */
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    cur_blck_used = mp_arr[mpid].tail_block->used;
+
+    if ((ptr = mpstrdup("This is another test")) == NULL)
+    {
+        ck_abort_msg("Error allocating memory in the current Memory Pool");
+    }
+
+    ck_assert_msg(
+        cur_blck_used != mp_arr[mpid].tail_block->used
+        , "The memory was not allocated in the current block");
+
+    ck_assert_msg(
+        strcmp(ptr, "This is another test") == 0
+        , "The string was not duplciated");
+
+#test mpasprintf_pars
+    char *ptr = NULL;
+
+    mpasprintf(&ptr, NULL);
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_PARM
+    , "One of the parameters is NULL but mperrno is not MP_ERRNO_PARM");
+
+    mpasprintf(NULL, "%s", "Test");
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_PARM
+    , "One of the parameters is NULL but mperrno is not MP_ERRNO_PARM");
+
+#test mpasprintf_call
+    int mpid = MP_DEF_MP_ID + 8;
+    size_t align = MP_DEF_ALIGN;
+    size_t cur_blck_used = 0;
+    char * ptr = NULL;
+    int rc1 = 0;
+    int rc2 = 0;
+    char str[32] = "";
+
+    mp_cur_mpid = mpid;
+
+    /* We have to make sure that the function 
+    allocates memory from the current mpid */
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    cur_blck_used = mp_arr[mpid].tail_block->used;
+
+    sprintf(str, "%s: %d", "This is yet another test", 3);
+    rc1 = strlen(str);
+    rc2 = mpasprintf(&ptr, "%s: %d", "This is yet another test", 3);
+    if (ptr == NULL)
+    {
+        ck_abort_msg("Error allocating memory in the current Memory Pool");
+    }
+
+    ck_assert_msg(
+        cur_blck_used != mp_arr[mpid].tail_block->used
+        , "The memory was not allocated in the current block");
+
+    ck_assert_msg(
+        strcmp(ptr, str) == 0
+        , "The string was not duplciated");
+
+    ck_assert_msg(
+        rc1 == rc2
+        , "The number of characters copied is not the same; it is %d but should be %d", rc2, rc1);
+
+#test mpasprintf_mpid_pars
+    char *ptr = NULL;
+
+    mpasprintf(&ptr, NULL);
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_PARM
+    , "One of the parameters is NULL but mperrno is not MP_ERRNO_PARM");
+
+    mpasprintf_mpid(NULL, MP_DEF_MP_ID, "%s", "Test");
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_PARM
+    , "One of the parameters is NULL but mperrno is not MP_ERRNO_PARM");
+
+
+#test mpasprintf_mpid_call
+    int mpid = MP_DEF_MP_ID;
+    size_t align = MP_DEF_ALIGN;
+    size_t cur_blck_used = 0;
+    char * ptr = NULL;
+    int rc1 = 0;
+    int rc2 = 0;
+    char str[32] = "";
+
+    /* We have to make sure that the function 
+    allocates memory from the current mpid */
+
+    mp_arr[mpid].init = 'Y';
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    /* First we allocate a dummy size of bytes to 
+    make sure the block is initialized 
+    and the first memory block is allocated */
+    if (mpget_chunk(align + 1, mpid, align) == NULL)
+    {
+        ck_abort_msg("Error adding chunk: %s", mpstrerror());
+    }
+
+    cur_blck_used = mp_arr[mpid].tail_block->used;
+
+    sprintf(str, "%s: %d", "This is yet another test", 3);
+    rc1 = strlen(str);
+    rc2 = mpasprintf(&ptr, "%s: %d", "This is yet another test", 3);
+    if (ptr == NULL)
+    {
+        ck_abort_msg("Error allocating memory in the current Memory Pool");
+    }
+
+    ck_assert_msg(
+        cur_blck_used != mp_arr[mpid].tail_block->used
+        , "The memory was not allocated in the current block");
+
+    ck_assert_msg(
+        strcmp(ptr, str) == 0
+        , "The string was not duplciated");
+
+    ck_assert_msg(
+        rc1 == rc2
+        , "The number of characters copied is not the same");
+
+#test mpnew_pars
+    int mpid = mpnew(NULL);
+
+    ck_assert_msg(
+        strcmp(mp_arr[mpid].descr, "-") == 0
+        , "No description is passed and the stored description is <%s> instead of '-'", mp_arr[mpid].descr);
+
+    mpid = mpnew("Test pool");
+
+    ck_assert_msg(
+        strcmp(mp_arr[mpid].descr, "Test pool") == 0
+        , "The description of the new Memory Pool <%s> doesn't match the one passed as parameter <%s>", 
+            mp_arr[mpid].descr,
+            "Test Pool");
+
+
+#test mpnew_check_limit
+    int i = 0;
+    int mpid = 0;
+
+    for (i = 0; i < MP_MAX_MP_ID + 1; i++)
+    {
+        mpid = mpnew(NULL);
+        if (mperrno != MP_ERRNO_SUCCESS)
+        {
+            break;
+        }
+    }
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_EXMP
+        , "The limit of Memory Pools was exceeded but the mperrno is not MP_ERRNO_EXMP <%d>", mperrno);
+
+    ck_assert_msg(
+        mpid == MP_ERRNO_EXMP
+        , "The limit of Memory Pools was exceeded but the returned value was not MP_ERRNO_EXMP");
+
+    for (i = 0; i < MP_MAX_MP_ID; i++)
+    {
+        if (
+            mp_arr[i].init == 'Y' &&
+            mp_arr[i].head_block == NULL
+        )
+        {
+            mp_arr[i].init = 'N';
+        }
+    }
+
+#test mppush_mpid_not_in_range
+    int mpid = 0;
+    int rc = 0;
+
+    mp_prev_mpid = MP_NO_MP_ID;
+
+    mpid = -1;
+    rc = mppush(mpid);
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_MPID
+        , "The mpid is out of range and the mperrno is not MP_ERRNO_MPID");
+
+    ck_assert_msg(
+        rc == MP_ERRNO_MPID
+        , "The mpid is out of range and the return code is not MP_ERRNO_MPID");
+
+    mpid = MP_MAX_MP_ID;
+    rc = mppush(mpid);
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_MPID
+        , "The mpid is out of range and the mperrno is not MP_ERRNO_MPID");
+
+    ck_assert_msg(
+        rc == MP_ERRNO_MPID
+        , "The mpid is out of range and the return code is not MP_ERRNO_MPID");
+
+
+#test mppush_mpid_not_init
+    int mpid = -1;
+    int i = 0;
+    int rc = 0;
+
+    mp_prev_mpid = MP_NO_MP_ID;
+
+    for(i = 0; i < MP_MAX_MP_ID; i++)
+    {
+        if (mp_arr[i].init != 'Y' && i != MP_DEF_MP_ID)
+        {
+            mpid = i;
+            break;
+        }
+    }
+
+    if (mpid == -1)
+    {
+        ck_abort_msg("Not found any un-initialized Memory Pool. Rewrite test case");
+    }
+
+    rc = mppush(mpid);
+     
+    ck_assert_msg(
+        mperrno == MP_ERRNO_NOIN
+        , "The mpid is out of range and the mperrno is not MP_ERRNO_NOIN");
+
+    ck_assert_msg(
+        rc == MP_ERRNO_NOIN
+        , "The mpid is out of range and the return code is not MP_ERRNO_NOIN");
+
+    
+#test mppush_prev_mpid
+    int mpid = -1;
+    int mpid2 = -1;
+    int i = 0;
+    int rc = 0;
+
+    mp_prev_mpid = MP_NO_MP_ID;
+
+    /* Getting the Memory Pool ID to use as current one */
+    for(i = 1; i < MP_MAX_MP_ID; i++)
+    {
+        if (mp_arr[i].init != 'Y')
+        {
+            mp_arr[i].init = 'Y';
+            mpid = i;
+            break;
+        }
+    }
+
+    if (mpid == -1)
+    {
+        ck_abort_msg("Not found any initialized Memory Pool. Rewrite test case");
+    }
+
+    /* Getting the Memory Pool ID to push */
+    for(i = mpid + 1; i < MP_MAX_MP_ID; i++)
+    {
+        if (mp_arr[i].init != 'Y')
+        {
+            mp_arr[i].init = 'Y';
+            mpid2 = i;
+            break;
+        }
+    }
+
+    if (mpid2 == -1)
+    {
+        ck_abort_msg("Not found any initialized Memory Pool. Rewrite test case");
+    }
+
+    mp_cur_mpid = mpid;
+
+    rc = mppush(mpid2);
+     
+    ck_assert_msg(
+        mp_cur_mpid == mpid2   
+        , "The current mpid is not set correctly, it should be %d but it is %d", mpid2, mp_cur_mpid);
+
+    ck_assert_msg(
+        mp_prev_mpid == mpid   
+        , "The previous mpid is not set correctly, it should be %d but it is %d", mpid, mp_prev_mpid);
+
+    ck_assert_msg(
+        rc == MP_ERRNO_SUCCESS
+        , "The return code should be MP_ERRNO_SUCCESS but it is %d", rc);
+
+#test mppop_mpid_not_in_range
+    int rc = 0;
+
+    mp_prev_mpid = -1;
+    rc = mppop();
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_NOPP
+        , "The mp_prev_mpid is out of range and the mperrno is not MP_ERRNO_NOPP");
+
+    ck_assert_msg(
+        rc == MP_ERRNO_NOPP
+        , "The mpid is out of range and the return code is not MP_ERRNO_NOPP");
+
+    mp_prev_mpid = MP_MAX_MP_ID;
+    rc = mppop();
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_NOPP
+        , "The mp_prev_mpid is out of range and the mperrno is not MP_ERRNO_NOPP");
+
+    ck_assert_msg(
+        rc == MP_ERRNO_NOPP
+        , "The mpid is out of range and the return code is not MP_ERRNO_NOPP");
+
+
+#test mppop_prev_mpid
+    int mpid = -1;
+    int i = 0;
+    int rc = 0;
+
+    mp_prev_mpid = MP_NO_MP_ID;
+
+    /* Getting the Memory Pool ID to pop */
+    for(i = 1; i < MP_MAX_MP_ID; i++)
+    {
+        if (mp_arr[i].init != 'Y')
+        {
+            mp_arr[i].init = 'Y';
+            mpid = i;
+            break;
+        }
+    }
+
+    if (mpid == MP_NO_MP_ID)
+    {
+        ck_abort_msg("Not found any initialized Memory Pool. Rewrite test case");
+    }
+
+    mp_cur_mpid = MP_NO_MP_ID;
+    mp_prev_mpid = mpid;
+
+    rc = mppop();
+     
+    ck_assert_msg(
+        mp_cur_mpid == mpid
+        , "The current mpid is not set correctly, it should be %d but it is %d", mpid, mp_cur_mpid);
+
+    ck_assert_msg(
+        mp_prev_mpid == MP_NO_MP_ID   
+        , "The previous mpid is not set correctly, it should be %d but it is %d", MP_NO_MP_ID, mp_prev_mpid);
+
+    ck_assert_msg(
+        rc == MP_ERRNO_SUCCESS
+        , "The return code should be MP_ERRNO_SUCCESS but it is %d", rc);
+
+#test mpset_mpid_not_in_range
+    int rc = 0;
+    int mpid = 0;
+
+    mpid = -1;
+    rc = mpset(mpid);
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_MPID
+        , "The mpid is out of range and the mperrno is not MP_ERRNO_MPID");
+
+    ck_assert_msg(
+        rc == MP_ERRNO_MPID
+        , "The mpid is out of range and the return code is not MP_ERRNO_MPID");
+
+    mpid = MP_MAX_MP_ID;
+    rc = mpset(mpid);
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_MPID
+        , "The mpid is out of range and the mperrno is not MP_ERRNO_MPID");
+
+    ck_assert_msg(
+        rc == MP_ERRNO_MPID
+        , "The mpid is out of range and the return code is not MP_ERRNO_MPID");
+
+#test mpset_mpid_not_init
+    int mpid = -1;
+    int i = 0;
+    int rc = 0;
+
+    mp_prev_mpid = MP_NO_MP_ID;
+
+    for(i = 0; i < MP_MAX_MP_ID; i++)
+    {
+        if (mp_arr[i].init != 'Y' && i != MP_DEF_MP_ID)
+        {
+            mpid = i;
+            break;
+        }
+    }
+
+    if (mpid == -1)
+    {
+        ck_abort_msg("Not found any un-initialized Memory Pool. Rewrite test case");
+    }
+
+    rc = mpset(mpid);
+     
+    ck_assert_msg(
+        mperrno == MP_ERRNO_NOIN
+        , "The mpid is out of range and the mperrno is not MP_ERRNO_NOIN");
+
+    ck_assert_msg(
+        rc == MP_ERRNO_NOIN
+        , "The mpid is out of range and the return code is not MP_ERRNO_NOIN");
+
+#test mpset_set
+    int mpid = MP_DEF_MP_ID;
+    int rc = 0;
+
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+
+    rc = mpset(mpid);
+
+    ck_assert_msg(
+        mp_cur_mpid == mpid   
+        , "The current mpid is not set correctly, it should be %d but it is %d", mpid, mp_cur_mpid);
+
+    ck_assert_msg(
+        rc == MP_ERRNO_SUCCESS
+        , "The return code should be MP_ERRNO_SUCCESS but it is %d", rc);
+    
+#test mpget_get
+    int mpid = MP_DEF_MP_ID;
+
+    mp_cur_mpid = mpid;
+
+    ck_assert_msg(
+        mpid == mpget()
+        , "The current mpid is not retrieved correctly, it should be %d but it is %d", mpid, mpget());
+
+#test mpdel_mpid_not_in_range
+    int rc = 0;
+    int mpid = 0;
+
+    mpid = -1;
+    rc = mpdel(mpid);
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_MPID
+        , "The mpid is out of range and the mperrno is not MP_ERRNO_MPID");
+
+    ck_assert_msg(
+        rc == MP_ERRNO_MPID
+        , "The mpid is out of range and the return code is not MP_ERRNO_MPID");
+
+    mpid = MP_MAX_MP_ID;
+    rc = mpdel(mpid);
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_MPID
+        , "The mpid is out of range and the mperrno is not MP_ERRNO_MPID");
+
+    ck_assert_msg(
+        rc == MP_ERRNO_MPID
+        , "The mpid is out of range and the return code is not MP_ERRNO_MPID");
+
+
+#test mpdel_delete_mem_block
+    int rc = 0;
+    int mpid = 0;
+    char *str = NULL;
+    int strlen = 64;
+    unsigned char *mem_start = NULL;
+    unsigned char *mem_end = NULL;
+    size_t tot_phy_mem = 0;
+
+    /* Get and set a new Memory pool */
+    mpid = mpnew("mpdel_mpid_not_in_range");
+
+    if (mperrno != MP_ERRNO_SUCCESS)
+    {
+        ck_abort_msg("Error creating new memory pool");
+    }
+
+    rc = mpset(mpid);
+
+    if (mperrno != MP_ERRNO_SUCCESS || rc != MP_ERRNO_SUCCESS)
+    {
+        ck_abort_msg("Error setting the new memory pool");
+    }
+
+    /* Allocate a chunk of that memory pool */
+    str = (char*)mpmalloc(sizeof(char) * strlen);
+
+    if (mperrno != MP_ERRNO_SUCCESS || str == NULL)
+    {
+        ck_abort_msg("Error allocating memory");
+    }
+
+    strcpy(str, "mpdel_mpid_not_in_range");
+
+    if (mp_arr[mpid].head_block == NULL)
+    {
+        ck_abort_msg("memory was created successfully with right function but actualy memory block is NULL");
+    }
+    
+    /* Check that the allocated chunk is between the ranges of the memory block */
+    mem_start = mp_arr[mpid].tail_block->block;
+    mem_end = mp_arr[mpid].tail_block->block + mp_arr[mpid].tail_block->size;
+
+    if ((uintptr_t)str < (uintptr_t)mem_start || (uintptr_t)str > (uintptr_t)mem_end)
+    {
+        ck_abort_msg("The memory allocated is not in the range of the memory block");
+    }
+
+    /* Delete the memory block */
+    tot_phy_mem = mp_tot_phy_mem;
+    tot_phy_mem -= mp_arr[mpid].tail_block->size;
+    rc = mpdel(mpid);
+
+    /* Check that the memory block is empty */
+    ck_assert_msg(
+        mp_arr[mpid].head_block == NULL
+        , "Memory pool should be deleted but the head_block is not NULL");
+
+    ck_assert_msg(
+        mp_arr[mpid].tail_block == NULL
+        , "Memory pool should be deleted but the tail_block is not NULL");
+
+    /* Check that the total physical memory varible is set correctly */
+    ck_assert_msg(
+        mp_tot_phy_mem == tot_phy_mem
+        , "The total physical memory is not zero after deleting all memory pools");
+
+    /* Check the return code */
+    ck_assert_msg(
+        rc == MP_ERRNO_SUCCESS
+        , "Return code is not MP_ERRNO_SUCCESS");
+
+#test mpdel_thread
+#if MP_THREAD_SAFE == 1
+    pthread_t th1;
+    args_t args;
+    int mpid = mpnew(NULL);
+
+    memset(&args, 0x00, sizeof(args));
+    args.mpid = mpid;
+    args.fn = &mpdel;
+
+    if (pthread_create(&th1, NULL, &mp_thread_fn, &args) != 0)
+    {
+        ck_abort_msg("Error creating thread");
+    }
+
+    pthread_join(th1, NULL);
+
+    ck_assert_msg(
+        args.rc == MP_ERRNO_THRD
+        , "Memory pool ID %d used by another thread and no error <%d>", mpid, args.rc);
+
+    ck_assert_msg(
+        args.mperrno == MP_ERRNO_THRD
+        , "Memory pool ID %d used by another thread and mperrno is not MP_ERRNO_THRD but <%d>", args.mperrno);
+
+#endif /* MP_THREAD_SAFE */
+
+#test mpdel_all_delete_mem_block
+    int rc = 0;
+    int mpid = 0;
+    int mpid2 = 0;
+    char *str = NULL;
+    int strlen = 64;
+    unsigned char *mem_start = NULL;
+    unsigned char *mem_end = NULL;
+
+    /* Get and set a new Memory pool */
+    mpid = mpnew("mpdel_all_mpid_not_in_range");
+    mpid2 = mpid;
+
+    if (mperrno != MP_ERRNO_SUCCESS)
+    {
+        ck_abort_msg("Error creating new memory pool");
+    }
+
+    rc = mpset(mpid);
+
+    if (mperrno != MP_ERRNO_SUCCESS || rc != MP_ERRNO_SUCCESS)
+    {
+        ck_abort_msg("Error setting the new memory pool");
+    }
+
+    /* Allocate a chunk of that memory pool */
+    str = (char*)mpmalloc(sizeof(char) * strlen);
+
+    if (mperrno != MP_ERRNO_SUCCESS || str == NULL)
+    {
+        ck_abort_msg("Error allocating memory");
+    }
+
+    strcpy(str, "mpdel_all_mpid_not_in_range");
+
+    if (mp_arr[mpid].head_block == NULL)
+    {
+        ck_abort_msg("memory was created successfully with right function but actualy memory block is NULL");
+    }
+    
+    /* Check that the allocated chunk is between the ranges of the memory block */
+    mem_start = mp_arr[mpid].tail_block->block;
+    mem_end = mp_arr[mpid].tail_block->block + mp_arr[mpid].tail_block->size;
+
+    if ((uintptr_t)str < (uintptr_t)mem_start || (uintptr_t)str > (uintptr_t)mem_end)
+    {
+        ck_abort_msg("The memory allocated is not in the range of the memory block");
+    }
+
+
+
+    /* Now set the Default memory pool */
+    mpid = MP_DEF_MP_ID;
+#if MP_THREAD_SAFE == 1
+    mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+    rc = mpset(MP_DEF_MP_ID);
+
+    if (mperrno != MP_ERRNO_SUCCESS || rc != MP_ERRNO_SUCCESS)
+    {
+        ck_abort_msg("Error setting the new memory pool");
+    }
+
+    /* Allocate a chunk of that memory pool */
+    str = (char*)mpmalloc(sizeof(char) * strlen);
+
+    if (mperrno != MP_ERRNO_SUCCESS || str == NULL)
+    {
+        ck_abort_msg("Error allocating memory");
+    }
+
+    strcpy(str, "mpdel_all_mpid_not_in_range");
+
+    if (mp_arr[mpid].head_block == NULL)
+    {
+        ck_abort_msg("memory was created successfully with right function but actualy memory block is NULL");
+    }
+    
+    /* Check that the allocated chunk is between the ranges of the memory block */
+    mem_start = mp_arr[mpid].tail_block->block;
+    mem_end = mp_arr[mpid].tail_block->block + mp_arr[mpid].tail_block->size;
+
+    if ((uintptr_t)str < (uintptr_t)mem_start || (uintptr_t)str > (uintptr_t)mem_end)
+    {
+        ck_abort_msg("The memory allocated is not in the range of the memory block");
+    }
+
+
+
+    /* Delete all memory blocks */
+    rc = mpdel_all();
+
+    /* Check that blocks are empty */
+    mpid = mpid2;
+    ck_assert_msg(
+        mp_arr[mpid].head_block == NULL
+        , "Memory pool %d should be deleted but the head_block is not NULL", mpid);
+
+    ck_assert_msg(
+        mp_arr[mpid].tail_block == NULL
+        , "Memory pool %d should be deleted but the tail_block is not NULL", mpid);
+
+    mpid = MP_DEF_MP_ID;
+    ck_assert_msg(
+        mp_arr[mpid].head_block == NULL
+        , "Memory pool %d should be deleted but the head_block is not NULL", mpid);
+
+    ck_assert_msg(
+        mp_arr[mpid].tail_block == NULL
+        , "Memory pool %d should be deleted but the tail_block is not NULL", mpid);
+
+    /* Check that the total physical memory varible is set to zero */
+    ck_assert_msg(
+        mp_tot_phy_mem == 0
+        , "The total physical memory is not zero after deleting all memory pools");
+
+    /* Check the return code */
+    ck_assert_msg(
+        rc == MP_ERRNO_SUCCESS
+        , "Return code is not MP_ERRNO_SUCCESS");
+
+
+#test mpclr_mpid_not_in_range
+    int rc = 0;
+    int mpid = 0;
+
+    mpid = -1;
+    rc = mpclr(mpid);
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_MPID
+        , "The mpid is out of range and the mperrno is not MP_ERRNO_MPID");
+
+    ck_assert_msg(
+        rc == MP_ERRNO_MPID
+        , "The mpid is out of range and the return code is not MP_ERRNO_MPID");
+
+    mpid = MP_MAX_MP_ID;
+    rc = mpdel(mpid);
+
+    ck_assert_msg(
+        mperrno == MP_ERRNO_MPID
+        , "The mpid is out of range and the mperrno is not MP_ERRNO_MPID");
+
+    ck_assert_msg(
+        rc == MP_ERRNO_MPID
+        , "The mpid is out of range and the return code is not MP_ERRNO_MPID");
+
+#test mpclr_clear_mem_block
+    int rc = 0;
+    int mpid = 0;
+    char *str = NULL;
+    int strlen = 64;
+    unsigned char *mem_start = NULL;
+    unsigned char *mem_end = NULL;
+    size_t used = 0;
+
+    /* Get and set a new Memory pool */
+    mpid = mpnew("mpdel_mpid_not_in_range");
+
+    if (mperrno != MP_ERRNO_SUCCESS)
+    {
+        ck_abort_msg("Error creating new memory pool");
+    }
+
+    rc = mpset(mpid);
+
+    if (mperrno != MP_ERRNO_SUCCESS || rc != MP_ERRNO_SUCCESS)
+    {
+        ck_abort_msg("Error setting the new memory pool");
+    }
+
+    /* Allocate a chunk of that memory pool */
+    str = (char*)mpmalloc(sizeof(char) * strlen);
+
+    if (mperrno != MP_ERRNO_SUCCESS || str == NULL)
+    {
+        ck_abort_msg("Error allocating memory");
+    }
+
+    strcpy(str, "mpdel_mpid_not_in_range");
+
+    if (mp_arr[mpid].head_block == NULL)
+    {
+        ck_abort_msg("memory was created successfully with right function but actualy memory block is NULL");
+    }
+    
+    /* Check that the allocated chunk is between the ranges of the memory block */
+    mem_start = mp_arr[mpid].tail_block->block;
+    mem_end = mp_arr[mpid].tail_block->block + mp_arr[mpid].tail_block->size;
+
+    if ((uintptr_t)str < (uintptr_t)mem_start || (uintptr_t)str > (uintptr_t)mem_end)
+    {
+        ck_abort_msg("The memory allocated is not in the range of the memory block");
+    }
+
+    /* Save the current used after usage */
+    used = mp_arr[mpid].tail_block->used;
+    if (used == 0)
+    {
+        ck_abort_msg("The given memory pool was used but its size is 0");
+    }
+
+    /* Clear the memory block */
+    rc = mpclr(mpid);
+
+    /* Check that the memory block is cleared */
+    ck_assert_msg(
+        mp_arr[mpid].tail_block->used == 0
+        , "Memory pool should be deleted but the head_block is not NULL");
+
+#test mpclr_thread
+#if MP_THREAD_SAFE == 1
+    pthread_t th1;
+    args_t args;
+    int mpid = mpnew(NULL);
+
+    memset(&args, 0x00, sizeof(args));
+    args.mpid = mpid;
+    args.fn = &mpclr;
+
+    if (pthread_create(&th1, NULL, &mp_thread_fn, &args) != 0)
+    {
+        ck_abort_msg("Error creating thread");
+    }
+
+    pthread_join(th1, NULL);
+
+    ck_assert_msg(
+        args.rc == MP_ERRNO_THRD
+        , "Memory pool ID %d used by another thread and no error <%d>", mpid, args.rc);
+
+    ck_assert_msg(
+        args.mperrno == MP_ERRNO_THRD
+        , "Memory pool ID %d used by another thread and mperrno is not MP_ERRNO_THRD but <%d>", args.mperrno);
+
+#endif /* MP_THREAD_SAFE */
+
+#test mpset_memlim_set
+    size_t memlim = 100000;
+
+    mpset_memlim(memlim);
+
+    ck_assert_msg(
+        mp_mem_limit == memlim
+        , "Memory limit not set correctly");
+
+#test mpget_memlim_get
+    size_t memlim = 100000;
+
+    mpset_memlim(memlim);
+
+    ck_assert_msg(
+        mpget_memlim() == memlim
+        , "Memory limit not retieved correctly");
+
+#test mpset_blksz_set
+    size_t blksz = 100000;
+
+    mpset_blksz(blksz);
+
+    ck_assert_msg(
+        mp_blk_sz == blksz
+        , "Block size not set correctly");
+
+#test mpget_blksz_get
+    size_t blksz = 100000;
+
+    mpset_blksz(blksz);
+
+    ck_assert_msg(
+        mpget_blksz() == blksz
+        , "Block size not retieved correctly");
+
+#test mpset_thread
+#if MP_THREAD_SAFE == 1
+    pthread_t th1;
+    args_t args;
+    int mpid = mpnew(NULL);
+
+    memset(&args, 0x00, sizeof(args));
+    args.mpid = mpid;
+    args.fn = &mpset;
+
+    if (pthread_create(&th1, NULL, &mp_thread_fn, &args) != 0)
+    {
+        ck_abort_msg("Error creating thread");
+    }
+
+    pthread_join(th1, NULL);
+
+    ck_assert_msg(
+        args.rc == MP_ERRNO_THRD
+        , "Memory pool ID %d set by another thread and no error <%d>", mpid, args.rc);
+
+    ck_assert_msg(
+        args.mperrno == MP_ERRNO_THRD
+        , "Memory pool ID %d set by another thread and mperrno is not MP_ERRNO_THRD but <%d>", args.mperrno);
+
+#endif /* MP_THREAD_SAFE */
+
+
+#test mpstrerrno_check
+    char *str = NULL;
+    int i = 0;
+    int errno_arr[] = {
+        MP_ERRNO_SUCCESS,
+        MP_ERRNO_MPID,
+        MP_ERRNO_SZNG,
+        MP_ERRNO_NOMM,
+        MP_ERRNO_EXMM,
+        MP_ERRNO_ALLO,
+        MP_ERRNO_EXAL,
+        MP_ERRNO_NOIN,
+        MP_ERRNO_EXMP,
+        MP_ERRNO_NOPP,
+        MP_ERRNO_DISP,
+        MP_ERRNO_PARM,
+        MP_ERRNO_THRD,
+        MP_ERRNO_SYSE,
+        999
+    };
+
+    for (i = 0; errno_arr[i] != 999; i++)
+    {
+        mperrno = errno_arr[i];
+        errno = ENOENT;
+
+        switch (mperrno)
+        {
+            case MP_ERRNO_SUCCESS:
+                str = "";
+                break;
+            case MP_ERRNO_MPID:
+                str = MP_ERRSTR_MPID;
+                break;
+            case MP_ERRNO_SZNG:
+                str = MP_ERRSTR_SZNG;
+                break;
+            case MP_ERRNO_NOMM:
+                str = MP_ERRSTR_NOMM;
+                break;
+            case MP_ERRNO_EXMM:
+                str = MP_ERRSTR_EXMM;
+                break;
+            case MP_ERRNO_ALLO:
+                str = MP_ERRSTR_ALLO;
+                break;
+            case MP_ERRNO_EXAL:
+                str = MP_ERRSTR_EXAL;
+                break;
+            case MP_ERRNO_NOIN:
+                str = MP_ERRSTR_NOIN;
+                break;
+            case MP_ERRNO_EXMP:
+                str = MP_ERRSTR_EXMP;
+                break;
+            case MP_ERRNO_NOPP:
+                str = MP_ERRSTR_NOPP;
+                break;
+            case MP_ERRNO_DISP:
+                str = MP_ERRSTR_DISP;
+                break;
+            case MP_ERRNO_PARM:
+                str = MP_ERRSTR_PARM;
+                break;
+            case MP_ERRNO_THRD:
+                str = MP_ERRSTR_THRD;
+                break;
+            case MP_ERRNO_SYSE:
+                str = strerror(errno);
+                break;
+            default:
+                str = "Error number not recognized";
+        }
+
+        ck_assert_msg(
+                strcmp(mpstrerror(), str) == 0
+                , "Wrong error message delivered for mperrno <%d>, <%s> instead of <%s>", mperrno, mpstrerror(), str);
+
+    }
+
+

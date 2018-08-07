@@ -1,0 +1,525 @@
+/****************************************************************************
+|*
+|* tap3edit Tools (http://www.tap3edit.com)
+|*
+|* $Id: ut.check 52 2014-09-20 15:08:24Z mrjones $
+|*
+|* Copyright (c) 2014, Javier Gutierrez <jgutierrez@tap3edit.com>
+|* 
+|* Permission to use, copy, modify, and/or distribute this software for any
+|* purpose with or without fee is hereby granted, provided that the above
+|* copyright notice and this permission notice appear in all copies.
+|* 
+|* THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+|* WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+|* MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+|* ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+|* WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+|* ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+|* OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+|*
+|*
+|* Module: ut_mp_rep.check
+|*
+|* Description: Memory pool management unit test
+|*
+|* Author: Javier Gutierrez (JG)
+|*
+|* Modifications:
+|*
+|* When         Who     Pos     What
+|* 20140926     JG              Initial version
+|*
+****************************************************************************/
+#include "mp.c"
+#include "mp_trc.c"
+#include "mp_rep.c"
+
+#suite Reporting Logic
+
+#test mpbin2hex_zero_alignment
+    char *str = NULL;
+
+    str = mpbin2hex("ro-str", 7, 0, "ro_str", 7);
+
+    if (str == NULL)
+    {
+        ck_abort_msg("Delivered string is NULL");
+    }
+
+    ck_assert_msg(
+        str[0] == '\0'
+    , "The delivered string should be empty but it is <%s>", str);
+
+#test mpbin2hex_check_sz_less_thn_align_and_start_eq_align
+    char hex[64] = "";
+    char *hex_p = NULL;
+    uchar buff[16] = "";
+    uchar *buff_p = NULL;
+    char buff_str[] = "01 02 03 04 05          .....   ";
+    size_t align = 8;
+
+    buff_p = (uchar *)((uintptr_t)(buff + align -1) & ~(uintptr_t)(align -1));
+    buff_p[0] = 0x01;
+    buff_p[1] = 0x02;
+    buff_p[2] = 0x03;
+    buff_p[3] = 0x04;
+    buff_p[4] = 0x05;
+
+    hex_p = mpbin2hex(hex, sizeof(hex), align, buff_p, 5);
+
+    if (hex_p == NULL)
+    {
+        ck_abort_msg("Delivered string is NULL");
+    }
+
+    ck_assert_msg(
+        strcmp(hex_p, buff_str) == 0
+    , "The delivered string <%s> is not as it should be <%s>", hex_p, buff_str);
+
+#test mpbin2hex_check_sz_eq_align_and_start_eq_align
+    char hex[64] = "";
+    char *hex_p = NULL;
+    uchar buff[16] = "";
+    uchar *buff_p = NULL;
+    char buff_str[] = "01 02 03 04 05 06 07 08 ........";
+    size_t align = 8;
+
+    buff_p = (uchar *)((uintptr_t)(buff + align -1) & ~(uintptr_t)(align -1));
+    buff_p[0] = 0x01;
+    buff_p[1] = 0x02;
+    buff_p[2] = 0x03;
+    buff_p[3] = 0x04;
+    buff_p[4] = 0x05;
+    buff_p[5] = 0x06;
+    buff_p[6] = 0x07;
+    buff_p[7] = 0x08;
+
+    hex_p = mpbin2hex(hex, sizeof(hex), align, buff_p, 8);
+
+    if (hex_p == NULL)
+    {
+        ck_abort_msg("Delivered string is NULL");
+    }
+
+    ck_assert_msg(
+        strcmp(hex_p, buff_str) == 0
+    , "The delivered string <%s> is not as it should be <%s>", hex_p, buff_str);
+
+#test mpbin2hex_check_sz_grt_thn_align_and_start_eq_align
+    char hex[64] = "";
+    char *hex_p = NULL;
+    uchar buff[16] = "";
+    uchar *buff_p = NULL;
+    char buff_str[] = "01 02 03 04 05 06 07 08 ........";
+    size_t align = 8;
+
+    buff_p = (uchar *)((uintptr_t)(buff + align -1) & ~(uintptr_t)(align -1));
+    buff_p[0] = 0x01;
+    buff_p[1] = 0x02;
+    buff_p[2] = 0x03;
+    buff_p[3] = 0x04;
+    buff_p[4] = 0x05;
+    buff_p[5] = 0x06;
+    buff_p[6] = 0x07;
+    buff_p[7] = 0x08;
+    buff_p[8] = 0x09;
+    buff_p[9] = 0x10;
+
+    hex_p = mpbin2hex(hex, sizeof(hex), align, buff_p, 10);
+
+    if (hex_p == NULL)
+    {
+        ck_abort_msg("Delivered string is NULL");
+    }
+
+    ck_assert_msg(
+        strcmp(hex_p, buff_str) == 0
+    , "The delivered string <%s> is not as it should be <%s>", hex_p, buff_str);
+
+#test mpbin2hex_check_sz_less_thn_align_and_start_grt_thn_align
+    char hex[64] = "";
+    char *hex_p = NULL;
+    uchar buff[16] = "";
+    uchar *buff_p = NULL;
+    char buff_str[] = "   01 02 03 04 05        .....  ";
+    size_t align = 8;
+
+    buff_p = (uchar *)((uintptr_t)(buff + align -1) & ~(uintptr_t)(align -1));
+    buff_p++;
+    buff_p[0] = 0x01;
+    buff_p[1] = 0x02;
+    buff_p[2] = 0x03;
+    buff_p[3] = 0x04;
+    buff_p[4] = 0x05;
+
+    hex_p = mpbin2hex(hex, sizeof(hex), align, buff_p, 5);
+
+    if (hex_p == NULL)
+    {
+        ck_abort_msg("Delivered string is NULL");
+    }
+
+    ck_assert_msg(
+        strcmp(hex_p, buff_str) == 0
+    , "The delivered string <%s> is not as it should be <%s>", hex_p, buff_str);
+
+#test mpbin2hex_check_sz_eq_align_and_start_grt_thn_align
+    char hex[64] = "";
+    char *hex_p = NULL;
+    uchar buff[16] = "";
+    uchar *buff_p = NULL;
+    char buff_str[] = "   01 02 03 04 05 06 07  .......";
+    size_t align = 8;
+
+    buff_p = (uchar *)((uintptr_t)(buff + align -1) & ~(uintptr_t)(align -1));
+    buff_p++;
+    buff_p[0] = 0x01;
+    buff_p[1] = 0x02;
+    buff_p[2] = 0x03;
+    buff_p[3] = 0x04;
+    buff_p[4] = 0x05;
+    buff_p[5] = 0x06;
+    buff_p[6] = 0x07;
+    buff_p[7] = 0x08;
+
+    hex_p = mpbin2hex(hex, sizeof(hex), align, buff_p, 8);
+
+    if (hex_p == NULL)
+    {
+        ck_abort_msg("Delivered string is NULL");
+    }
+
+    ck_assert_msg(
+        strcmp(hex_p, buff_str) == 0
+    , "The delivered string <%s> is not as it should be <%s>", hex_p, buff_str);
+
+#test mpbin2hex_check_sz_grt_thn_align_and_start_grt_thn_align
+    char hex[64] = "";
+    char *hex_p = NULL;
+    uchar buff[16] = "";
+    uchar *buff_p = NULL;
+    char buff_str[] = "   01 02 03 04 05 06 07  .......";
+    size_t align = 8;
+
+    buff_p = (uchar *)((uintptr_t)(buff + align -1) & ~(uintptr_t)(align -1));
+    buff_p++;
+    buff_p[0] = 0x01;
+    buff_p[1] = 0x02;
+    buff_p[2] = 0x03;
+    buff_p[3] = 0x04;
+    buff_p[4] = 0x05;
+    buff_p[5] = 0x06;
+    buff_p[6] = 0x07;
+    buff_p[7] = 0x08;
+    buff_p[8] = 0x09;
+    buff_p[9] = 0x10;
+
+    hex_p = mpbin2hex(hex, sizeof(hex), align, buff_p, 10);
+
+    if (hex_p == NULL)
+    {
+        ck_abort_msg("Delivered string is NULL");
+    }
+
+    ck_assert_msg(
+        strcmp(hex_p, buff_str) == 0
+    , "The delivered string <%s> is not as it should be <%s>", hex_p, buff_str);
+
+#test mpbin2hex_check_sz_less_thn_align_and_start_lss_thn_align
+    char hex[64] = "";
+    char *hex_p = NULL;
+    uchar buff[16] = "";
+    uchar *buff_p = NULL;
+    char buff_str[] = "                     01        .";
+    size_t align = 8;
+
+    buff_p = (uchar *)((uintptr_t)(buff + align -1) & ~(uintptr_t)(align -1));
+    buff_p--;
+    buff_p[0] = 0x01;
+    buff_p[1] = 0x02;
+    buff_p[2] = 0x03;
+    buff_p[3] = 0x04;
+    buff_p[4] = 0x05;
+
+    hex_p = mpbin2hex(hex, sizeof(hex), align, buff_p, 5);
+
+    if (hex_p == NULL)
+    {
+        ck_abort_msg("Delivered string is NULL");
+    }
+
+    ck_assert_msg(
+        strcmp(hex_p, buff_str) == 0
+    , "The delivered string <%s> is not as it should be <%s>", hex_p, buff_str);
+
+#test mpbin2hex_check_sz_eq_align_and_start_lss_thn_align
+    char hex[64] = "";
+    char *hex_p = NULL;
+    uchar buff[16] = "";
+    uchar *buff_p = NULL;
+    char buff_str[] = "                     01        .";
+    size_t align = 8;
+
+    buff_p = (uchar *)((uintptr_t)(buff + align -1) & ~(uintptr_t)(align -1));
+    buff_p--;
+    buff_p[0] = 0x01;
+    buff_p[1] = 0x02;
+    buff_p[2] = 0x03;
+    buff_p[3] = 0x04;
+    buff_p[4] = 0x05;
+    buff_p[5] = 0x06;
+    buff_p[6] = 0x07;
+    buff_p[7] = 0x08;
+
+    hex_p = mpbin2hex(hex, sizeof(hex), align, buff_p, 8);
+
+    if (hex_p == NULL)
+    {
+        ck_abort_msg("Delivered string is NULL");
+    }
+
+    ck_assert_msg(
+        strcmp(hex_p, buff_str) == 0
+    , "The delivered string <%s> is not as it should be <%s>", hex_p, buff_str);
+
+#test mpbin2hex_check_sz_grt_thn_align_and_start_lss_thn_align
+    char hex[64] = "";
+    char *hex_p = NULL;
+    uchar buff[16] = "";
+    uchar *buff_p = NULL;
+    char buff_str[] = "                     01        .";
+    size_t align = 8;
+
+    buff_p = (uchar *)((uintptr_t)(buff + align -1) & ~(uintptr_t)(align -1));
+    buff_p--;
+    buff_p[0] = 0x01;
+    buff_p[1] = 0x02;
+    buff_p[2] = 0x03;
+    buff_p[3] = 0x04;
+    buff_p[4] = 0x05;
+    buff_p[5] = 0x06;
+    buff_p[6] = 0x07;
+    buff_p[7] = 0x08;
+    buff_p[8] = 0x09;
+    buff_p[9] = 0x10;
+
+    hex_p = mpbin2hex(hex, sizeof(hex), align, buff_p, 10);
+
+    if (hex_p == NULL)
+    {
+        ck_abort_msg("Delivered string is NULL");
+    }
+
+    ck_assert_msg(
+        strcmp(hex_p, buff_str) == 0
+    , "The delivered string <%s> is not as it should be <%s>", hex_p, buff_str);
+
+#test mpsz2rnd_pars
+    char *str = NULL;
+
+    str = mpsz2rnd(NULL, 5);
+
+    ck_assert_msg(
+        str == NULL
+    , "Given parameter is NULL but the return parameter is not NULL <%s>", str);
+
+
+#test mpsz2rnd_check_zero
+    char str[32] = "";
+    char *str_p = NULL;
+
+    str_p = mpsz2rnd(str, 0);
+
+    ck_assert_msg(
+        strcmp(str_p, "0.0b") == 0
+    , "Return value is not as it should be, its <%s>", str);
+
+#test mpsz2rnd_check_1k
+    char str[32] = "";
+    char *str_p = NULL;
+    size_t sz = 0;
+    char l_str[32] = "";
+    size_t factor = 1;
+
+    sz = 999;
+    str_p = mpsz2rnd(str, sz);
+
+    sprintf(l_str, "%.*fb", 1, (double)sz/factor);
+    ck_assert_msg(
+        strcmp(str_p, l_str) == 0
+    , "Return value is not as it should be <%s>, but it is <%s>", l_str, str_p);
+
+    sz = 1000;
+    str_p = mpsz2rnd(str, sz);
+
+    sprintf(l_str, "%.*fKb", 1, (double)sz/(factor * 1024));
+    ck_assert_msg(
+        strcmp(str_p, l_str) == 0
+    , "Return value is not as it should be <%s>, but it is <%s>", l_str, str_p);
+
+    sz = 1024;
+    str_p = mpsz2rnd(str, sz);
+
+    sprintf(l_str, "%.*fKb", 1, (double)sz/(factor * 1024));
+    ck_assert_msg(
+        strcmp(str_p, l_str) == 0
+    , "Return value is not as it should be <%s>, but it is <%s>", l_str, str_p);
+
+    sz = 1025;
+    str_p = mpsz2rnd(str, sz);
+
+    sprintf(l_str, "%.*fKb", 1, (double)sz/(factor * 1024));
+    ck_assert_msg(
+        strcmp(str_p, l_str) == 0
+    , "Return value is not as it should be <%s>, but it is <%s>", l_str, str_p);
+
+#test mpsz2rnd_check_1m
+    char str[32] = "";
+    char *str_p = NULL;
+    size_t sz = 0;
+    char l_str[32] = "";
+    size_t factor = 1024;
+
+    sz = 999999;
+    str_p = mpsz2rnd(str, sz);
+
+    sprintf(l_str, "%.*fKb", 1, (double)sz/factor);
+    ck_assert_msg(
+        strcmp(str_p, l_str) == 0
+    , "Return value is not as it should be <%s>, but it is <%s>", l_str, str_p);
+
+    sz = 1000000;
+    str_p = mpsz2rnd(str, sz);
+
+    sprintf(l_str, "%.*fMb", 1, (double)sz/(factor * 1024));
+    ck_assert_msg(
+        strcmp(str_p, l_str) == 0
+    , "Return value is not as it should be <%s>, but it is <%s>", l_str, str_p);
+
+    sz = factor * 1024;
+    str_p = mpsz2rnd(str, sz);
+
+    sprintf(l_str, "%.*fMb", 1, (double)sz/(factor * 1024));
+    ck_assert_msg(
+        strcmp(str_p, l_str) == 0
+    , "Return value is not as it should be <%s>, but it is <%s>", l_str, str_p);
+
+    sz = (factor * 1024) + 1;
+    str_p = mpsz2rnd(str, sz);
+
+    sprintf(l_str, "%.*fMb", 1, (double)sz/(factor * 1024));
+    ck_assert_msg(
+        strcmp(str_p, l_str) == 0
+    , "Return value is not as it should be <%s>, but it is <%s>", l_str, str_p);
+
+#test mpsz2rnd_check_1g
+    char str[32] = "";
+    char *str_p = NULL;
+    size_t sz = 0;
+    char l_str[32] = "";
+    size_t factor = 1024 * 1024;
+
+    sz = 999999999;
+    str_p = mpsz2rnd(str, sz);
+
+    sprintf(l_str, "%.*fMb", 1, (double)sz/factor);
+    ck_assert_msg(
+        strcmp(str_p, l_str) == 0
+    , "Return value is not as it should be <%s>, but it is <%s>", l_str, str_p);
+
+    sz = 1000000000;
+    str_p = mpsz2rnd(str, sz);
+
+    sprintf(l_str, "%.*fGb", 1, (double)sz/(factor * 1024));
+    ck_assert_msg(
+        strcmp(str_p, l_str) == 0
+    , "Return value is not as it should be <%s>, but it is <%s>", l_str, str_p);
+
+    sz = factor * 1024;
+    str_p = mpsz2rnd(str, sz);
+
+    sprintf(l_str, "%.*fGb", 1, (double)sz/(factor * 1024));
+    ck_assert_msg(
+        strcmp(str_p, l_str) == 0
+    , "Return value is not as it should be <%s>, but it is <%s>", l_str, str_p);
+
+    sz = (factor * 1024) + 1;
+    str_p = mpsz2rnd(str, sz);
+
+    sprintf(l_str, "%.*fGb", 1, (double)sz/(factor * 1024));
+    ck_assert_msg(
+        strcmp(str_p, l_str) == 0
+    , "Return value is not as it should be <%s>, but it is <%s>", l_str, str_p);
+
+
+#test mppow_check
+    
+    int i = 0;
+    int pow = 0;
+    struct input_t
+    {
+        int x;
+        int y;
+        int res;
+    } in[] = {
+        {-3, -3, 1},
+        {-3, -2, 1},
+        {-3, -1, 1},
+        {-3,  0, 1},
+        {-3,  1,-3},
+        {-3,  2, 9},
+        {-3,  3,-27},
+        {-2, -3, 1},
+        {-2, -2, 1},
+        {-2, -1, 1},
+        {-2,  0, 1},
+        {-2,  1,-2},
+        {-2,  2, 4},
+        {-2,  3,-8},
+        {-1, -3, 1},
+        {-1, -2, 1},
+        {-1, -1, 1},
+        {-1,  0, 1},
+        {-1,  1,-1},
+        {-1,  2, 1},
+        {-1,  3,-1},
+        { 0, -3, 1},
+        { 0, -2, 1},
+        { 0, -1, 1},
+        { 0,  0, 1},
+        { 0,  1, 0},
+        { 0,  2, 0},
+        { 0,  3, 0},
+        { 1, -3, 1},
+        { 1, -2, 1},
+        { 1, -1, 1},
+        { 1,  0, 1},
+        { 1,  1, 1},
+        { 1,  2, 1},
+        { 1,  3, 1},
+        { 2, -3, 1},
+        { 2, -2, 1},
+        { 2, -1, 1},
+        { 2,  0, 1},
+        { 2,  1, 2},
+        { 2,  2, 4},
+        { 2,  3, 8},
+        { 3, -3, 1},
+        { 3, -2, 1},
+        { 3, -1, 1},
+        { 3,  0, 1},
+        { 3,  1, 3},
+        { 3,  2, 9},
+        { 3,  3, 27},
+        { 999,  0, 0}
+    };
+        
+    for(i = 0; in[i].x != 999; i++)
+    {
+        pow = mppow(in[i].x, in[i].y);
+        ck_assert_msg(
+                pow == in[i].res
+                , "Return value (x=%d, y=%d) is not as it should be <%d>, but it is <%d>", in[i].x, in[i].y, in[i].res, pow);
+    }
+

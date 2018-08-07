@@ -1,0 +1,1253 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>T3E Memory Pool</title>
+<style type="text/css">
+<!--
+.style1 {
+ 	font-size: 36px
+} 
+-->
+</style>
+</head>
+<style>
+body {
+	background: white;
+	margin: 0 auto;
+}
+h1, h2, h3, p {
+	/* font-family: Verdana, Helvetica, Arial, sans-serif; */
+	/* font-family: 'Open Sans', 'Lucida Grande', 'Lucida Sans Unicode', 'Geneva', 'Verdana', sans-serif; */
+	font-family: 'Optima', sans-serif;
+	/* color: #515153; */
+	color: #4f4f4f;
+	background-color: transparent;
+} 
+h1 {
+	font-size: 60px;
+} 
+h2 {
+	font-size: 30px;
+} 
+h3 {
+	font-size: 24px;
+} 
+p {
+	/* font-size: 14px; */
+	font-size: 100%;
+}
+a, a:visited, a:active, a:hover, a:link {
+	text-decoration:none;
+}
+div {
+	display:block;
+}
+dt {
+	font-style: italic;
+}
+.footer {
+	font-size: 11px;
+	text-align: center;
+	padding-top: 13px;
+	color: #404040;
+	clear: both;
+	color: #555555;
+	font-family: verdana,helvetica,arial,sans-serif;
+	line-height: 20px;	
+}
+.header
+{
+	background: #13001c; /* Old browsers */
+	background: -moz-linear-gradient(left,  #13001c 0%, #4f036d 100%); /* FF3.6+ */
+	background: -webkit-gradient(linear, left top, right top, color-stop(0%,#13001c), color-stop(100%,#4f036d)); /* Chrome,Safari4+ */
+	background: -webkit-linear-gradient(left,  #13001c 0%,#4f036d 100%); /* Chrome10+,Safari5.1+ */
+	background: -o-linear-gradient(left,  #13001c 0%,#4f036d 100%); /* Opera 11.10+ */
+	background: -ms-linear-gradient(left,  #13001c 0%,#4f036d 100%); /* IE10+ */
+	background: linear-gradient(to right,  #13001c 0%,#4f036d 100%); /* W3C */
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#13001c', endColorstr='#4f036d',GradientType=1 ); /* IE6-9 */
+
+	padding:15px;
+	font-size:28px;
+	font-family: verdana,helvetica,arial,sans-serif;
+	color:white;
+	height:160px;
+	line-height: 20px;	
+}
+.container {
+	margin-right: auto;
+	margin-left: auto;
+}
+.inner_container {
+	margin-left: 89.5px;
+	margin-right: 89.5px;
+}
+.main_title {
+	color: white;
+}
+.sidebar {
+	float: left;
+	font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+	height: 152px;
+	margin-left: 0px;
+	min-height: 10px;
+	width: 200px;
+
+	background-color: transparent;
+}
+
+.sidebar_list {
+	background-color: rgb(255, 255, 255);
+	color: rgb(51, 51, 51);
+	font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+	font-size: 18px;
+	height: 200px;
+	line-height: 22px;
+	list-style-image: none;
+	list-style-position: outside;
+	list-style-type: none;
+	margin-bottom: 0px;
+	margin-left: 0px;
+	margin-right: 0px;
+	margin-top: 20px;
+	padding-bottom: 0px;
+	padding-left: 0px;
+	padding-right: 0px;
+	padding-top: 0px;
+	width: 200px;
+}
+
+a.sidebar_elem:link {
+	color:#000066;
+}
+a.sidebar_elem:visited{
+	color:#000066;
+}
+a.sidebar_elem:hover {
+	color:#666666;
+}
+
+.span {
+	background-color: white; 
+	margin: 0 auto;
+
+	font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+		
+	font-size: 17px;
+	line-height: 20px;
+	margin-left: 220px;
+	margin-right: 180px;
+	min-height: 1px;
+	/* width: 730px; */
+}
+.nav {
+	background-color:#000000;
+	padding:1px;
+	font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+	font-size: 13px;
+	color:#999999;
+	height:40px;
+	line-height: 13px;
+	min-height: 40px;	
+}
+.menu {
+	margin-left: 54px;
+}
+
+.menu_elem{
+	margin-left: 9.5px;
+	display: -moz-inline-box;
+	display: inline-block;
+	float: left;
+	
+}
+
+a.menu_link:link {
+	color:#999999;
+}
+a.menu_link:visited{
+	color:#999999;
+}
+a.menu_link:hover {
+	color:#FFFFFF;
+}
+
+.style2 {
+	font-family: Arial, Helvetica, sans-serif;
+	font-size:12px;
+	font-style:italic;
+	color:#666666;		
+}
+</style>
+
+<body>
+<div class="nav">
+	<ul class="menu">
+		<li class="menu_elem">
+			<a class="menu_link" href="http://www.tap3edit.com">Home</a>
+		</li>
+		<li class="menu_elem">
+			<a class="menu_link" href="http://www.tap3edit.com/en_4_1_tools.php">Download</a>
+		</li>
+	</ul>
+</div>
+<header>
+  <div class="container header">
+    <h1 class="inner_container main_title ">T3E Memory Pool <span class="style1">(v0.02)</span></h1>
+    <p class="inner_container main_title ">A simple and effective memory allocation library </p>
+  </div>
+</header>
+
+<div class="container">
+<div class="inner_container">
+
+<div class="sidebar">
+	<ul class="sidebar_list">
+	<li>
+	<a class="sidebar_elem" href="#Overview">1. Overview</a>
+	</li>
+	<li class>
+	<a class="sidebar_elem" href="#Architecture">2. Architecture</a>
+	</li>
+	<li class>
+	<a class="sidebar_elem" href="#Getting_Started">3. Getting started</a>
+	</li>
+	<li class>
+	<a class="sidebar_elem" href="#Sample_Code">4. Sample code</a>
+	</li>
+	<li class>
+	<a class="sidebar_elem" href="#Reference_Material">5. Reference material</a>
+	</li>
+	</ul>
+</div>
+
+<div class="span">
+<h2><a id="Overview"></a>1. Overview</a></h2>
+<p>The T3E Memory Pool allows you managing the memory in your C programs in a more simple and effective way than with standard allocators like e.g. malloc(). It allows the dynamic allocation of one or more fixed-sized blocks of heap memory at once; chunks of these blocks can then freely be used and reused in your program as with the standard allocator but without the need of freeing them each time. All memory pools can be destroyed in one step at the end of the program.</p>
+
+<table border="0" align="center" cellpadding="0" cellspacing="0">
+<tbody>
+<tr>
+<td width="205">
+<p align="center"><span style="font-size: medium;">malloc()</span></p>
+<p align="center"><span style="font-size: medium;">free()</span></p>
+<p align="center"><span style="font-size: medium;">malloc()</span></p>
+<p align="center"><span style="font-size: medium;">free()</span></p>
+<p align="center"><span style="font-size: medium;">malloc()</span></p>
+<p align="center"><span style="font-size: medium;">free()</span></p>
+</td>
+<td width="05">
+<p align="center"><span style="font-size: xx-large;"><strong>&rarr;</strong></span></p>
+</td>
+<td width="205">
+<p align="center"><span style="font-size: medium;">mpmalloc()</span></p>
+<p align="center"><span style="font-size: medium;">mpmalloc()</span></p>
+<p align="center"><span style="font-size: medium;">mpmalloc()</span></p>
+<p align="center"><span style="font-size: medium;">mpdel()</span></p>
+</td>
+</tr>
+</tbody>
+</table>
+
+<p>This memory pool manager is not particularly much faster than malloc(), but its low weight and simplicity, specially in complicated malloc()-free() logics structures like in loops or recursions, makes its implementation attractive.</p>
+
+<p>T3E Memory Pool offers a default pool, which can be used without any explicit allocation, this facilitates a quick start if we need fast implementation and if just one pool is enough. Up to 99 additional pools are available with one single allocation for each one. Analogous functions like malloc(), calloc() and realloc() are available  for the allocation of the memory chunks within each of the pools. With a certain parameter it can be specified from which of the pools the memory will be taken. </p>
+
+<p>The memory pool manager can be used in a multithreaded architecture by just following a few simple rules. It also supports the implementation on a Unix-like as well as on Windows platforms.</p>
+<p>&nbsp;</p>
+<h2><a id="Architecture"></a>2. Architecture</a></h2>
+<p>Each memory pool assigns by default a block of 250 KB from the heap to start with the actual memory allocation. Whenever this block is fully used and the next allocation exceeds the amount of free memory available in this block, another block with the same default size is created. Whenever an allocation with a size bigger than the default block size is required then that size is used for the block creation. The total amount of memory can grow up to a default value of 3 GB for 32 bits platforms and 5 GB for 64 bits, this value can be adjusted if needed.</p>
+
+<canvas id="MP_diagram" width="680" height="510">
+&lt;Image cannot be displayed. This browser does not support HTML5 Canvas&gt;
+</canvas>
+
+<script type="text/javascript">
+
+// Set up!
+var a_canvas = document.getElementById("MP_diagram");
+var ctx = a_canvas.getContext("2d");
+
+ctx.lineWidth = 3;
+
+//MemPool_0;
+ctx.beginPath();
+ctx.moveTo(15,50);
+ctx.lineTo(645,50);
+ctx.lineTo(645,150);
+ctx.lineTo(15,150);
+ctx.closePath();
+ctx.stroke();
+
+//Mem_0_1;
+ctx.beginPath();
+ctx.moveTo(45,90);
+ctx.lineTo(130,90);
+ctx.lineTo(130,130);
+ctx.lineTo(45,130);
+ctx.closePath();
+ctx.stroke();
+ctx.fillStyle = "rgba(185,255,75,1)";
+ctx.fill();
+
+//Block_0_1;
+ctx.beginPath();
+ctx.moveTo(45,90);
+ctx.lineTo(145,90);
+ctx.lineTo(145,130);
+ctx.lineTo(45,130);
+ctx.closePath();
+ctx.stroke();
+
+//Mem_0_2;
+ctx.beginPath();
+ctx.moveTo(175,90);
+ctx.lineTo(268,90);
+ctx.lineTo(268,130);
+ctx.lineTo(175,130);
+ctx.closePath();
+ctx.stroke();
+ctx.fillStyle = "rgba(185,255,75,1)";
+ctx.fill();
+
+//Block_0_2;
+ctx.beginPath();
+ctx.moveTo(175,90);
+ctx.lineTo(275,90);
+ctx.lineTo(275,130);
+ctx.lineTo(175,130);
+ctx.closePath();
+ctx.stroke();
+
+//Mem_0_3;
+ctx.beginPath();
+ctx.moveTo(305,90);
+ctx.lineTo(390,90);
+ctx.lineTo(390,130);
+ctx.lineTo(305,130);
+ctx.closePath();
+ctx.stroke();
+ctx.fillStyle = "rgba(185,255,75,1)";
+ctx.fill();
+
+//Block_0_3;
+ctx.beginPath();
+ctx.moveTo(305,90);
+ctx.lineTo(405,90);
+ctx.lineTo(405,130);
+ctx.lineTo(305,130);
+ctx.closePath();
+ctx.stroke();
+
+//Mem_0_N;
+ctx.beginPath();
+ctx.moveTo(515,90);
+ctx.lineTo(545,90);
+ctx.lineTo(545,130);
+ctx.lineTo(515,130);
+ctx.closePath();
+ctx.stroke();
+ctx.fillStyle = "rgba(185,255,75,1)";
+ctx.fill();
+
+//Block_0_N;
+ctx.beginPath();
+ctx.moveTo(515,90);
+ctx.lineTo(615,90);
+ctx.lineTo(615,130);
+ctx.lineTo(515,130);
+ctx.closePath();
+ctx.stroke();
+
+
+
+//MemPool_1;
+ctx.beginPath();
+ctx.moveTo(15,200);
+ctx.lineTo(645,200);
+ctx.lineTo(645,300);
+ctx.lineTo(15,300);
+ctx.closePath();
+ctx.stroke();
+
+//Mem_1_1;
+ctx.beginPath();
+ctx.moveTo(45,240);
+ctx.lineTo(130,240);
+ctx.lineTo(130,280);
+ctx.lineTo(45,280);
+ctx.closePath();
+ctx.stroke();
+ctx.fillStyle = "rgba(185,255,75,1)";
+ctx.fill();
+
+//Block_1_1;
+ctx.beginPath();
+ctx.moveTo(45,240);
+ctx.lineTo(145,240);
+ctx.lineTo(145,280);
+ctx.lineTo(45,280);
+ctx.closePath();
+ctx.stroke();
+
+//Mem_1_2;
+ctx.beginPath();
+ctx.moveTo(175,240);
+ctx.lineTo(268,240);
+ctx.lineTo(268,280);
+ctx.lineTo(175,280);
+ctx.closePath();
+ctx.stroke();
+ctx.fillStyle = "rgba(185,255,75,1)";
+ctx.fill();
+
+//Block_1_2;
+ctx.beginPath();
+ctx.moveTo(175,240);
+ctx.lineTo(275,240);
+ctx.lineTo(275,280);
+ctx.lineTo(175,280);
+ctx.closePath();
+ctx.stroke();
+
+//Mem_1_3;
+ctx.beginPath();
+ctx.moveTo(305,240);
+ctx.lineTo(420,240);
+ctx.lineTo(420,280);
+ctx.lineTo(305,280);
+ctx.closePath();
+ctx.stroke();
+ctx.fillStyle = "rgba(185,255,75,1)";
+ctx.fill();
+
+//Block_1_3;
+ctx.beginPath();
+ctx.moveTo(305,240);
+ctx.lineTo(420,240);
+ctx.lineTo(420,280);
+ctx.lineTo(305,280);
+ctx.closePath();
+ctx.stroke();
+
+//Mem_1_N;
+ctx.beginPath();
+ctx.moveTo(515,240);
+ctx.lineTo(545,240);
+ctx.lineTo(545,280);
+ctx.lineTo(515,280);
+ctx.closePath();
+ctx.stroke();
+ctx.fillStyle = "rgba(185,255,75,1)";
+ctx.fill();
+
+//Block_1_N;
+ctx.beginPath();
+ctx.moveTo(515,240);
+ctx.lineTo(615,240);
+ctx.lineTo(615,280);
+ctx.lineTo(515,280);
+ctx.closePath();
+ctx.stroke();
+
+
+
+//MemPool_N;
+ctx.beginPath();
+ctx.moveTo(15,400);
+ctx.lineTo(645,400);
+ctx.lineTo(645,500);
+ctx.lineTo(15,500);
+ctx.closePath();
+ctx.stroke();
+
+//Mem_N_1;
+ctx.beginPath();
+ctx.moveTo(45,440);
+ctx.lineTo(130,440);
+ctx.lineTo(130,480);
+ctx.lineTo(45,480);
+ctx.closePath();
+ctx.stroke();
+ctx.fillStyle = "rgba(185,255,75,1)";
+ctx.fill();
+
+//Block_N_1;
+ctx.beginPath();
+ctx.moveTo(45,440);
+ctx.lineTo(145,440);
+ctx.lineTo(145,480);
+ctx.lineTo(45,480);
+ctx.closePath();
+ctx.stroke();
+
+//Mem_N_2;
+ctx.beginPath();
+ctx.moveTo(175,440);
+ctx.lineTo(268,440);
+ctx.lineTo(268,480);
+ctx.lineTo(175,480);
+ctx.closePath();
+ctx.stroke();
+ctx.fillStyle = "rgba(185,255,75,1)";
+ctx.fill();
+
+//Block_N_2;
+ctx.beginPath();
+ctx.moveTo(175,440);
+ctx.lineTo(275,440);
+ctx.lineTo(275,480);
+ctx.lineTo(175,480);
+ctx.closePath();
+ctx.stroke();
+
+//Mem_N_3;
+ctx.beginPath();
+ctx.moveTo(305,440);
+ctx.lineTo(390,440);
+ctx.lineTo(390,480);
+ctx.lineTo(305,480);
+ctx.closePath();
+ctx.stroke();
+ctx.fillStyle = "rgba(185,255,75,1)";
+ctx.fill();
+
+//Block_N_3;
+ctx.beginPath();
+ctx.moveTo(305,440);
+ctx.lineTo(405,440);
+ctx.lineTo(405,480);
+ctx.lineTo(305,480);
+ctx.closePath();
+ctx.stroke();
+
+//Mem_N_N;
+ctx.beginPath();
+ctx.moveTo(515,440);
+ctx.lineTo(545,440);
+ctx.lineTo(545,480);
+ctx.lineTo(515,480);
+ctx.closePath();
+ctx.stroke();
+ctx.fillStyle = "rgba(185,255,75,1)";
+ctx.fill();
+
+//Block_N_N;
+ctx.beginPath();
+ctx.moveTo(515,440);
+ctx.lineTo(615,440);
+ctx.lineTo(615,480);
+ctx.lineTo(515,480);
+ctx.closePath();
+ctx.stroke();
+
+// Labels
+ctx.fillStyle = "black";
+ctx.font = "17px Arial";
+ctx.fillText("Memory Pool 0 (default)",15,35);
+
+ctx.fillText("Block 1",45,75);
+ctx.fillText("Block 2",175,75);
+ctx.fillText("Block 3",305,75);
+ctx.fillText("Block N",515,75);
+
+ctx.fillText("Memory Pool 1",15,185);
+
+ctx.fillText("Block 1",45,225);
+ctx.fillText("Block 2",175,225);
+ctx.fillText("Block 3",305,225);
+ctx.fillText("Block N",515,225);
+
+ctx.fillText("Memory Pool 99",15,385);
+
+ctx.fillText("Block 1",45,425);
+ctx.fillText("Block 2",175,425);
+ctx.fillText("Block 3",305,425);
+ctx.fillText("Block N",515,425);
+
+ctx.fillText("250 KB", 70,116);    // Block_0_1
+ctx.fillText("250 KB", 195,116);    // Block_0_2
+ctx.fillText("250 KB", 325,116);    // Block_0_3
+ctx.fillText("250 KB", 535,116);    // Block_0_N
+
+ctx.fillText("250 KB", 70,266);    // Block_1_1
+ctx.fillText("250 KB", 195,266);    // Block_1_2
+ctx.fillStyle = "red";
+ctx.fillText("300 KB", 325,266);    // Block_1_3
+ctx.fillStyle = "black";
+ctx.fillText("250 KB", 535,266);    // Block_1_N
+
+ctx.fillText("250 KB", 70,466);    // Block_N_1
+ctx.fillText("250 KB", 195,466);    // Block_N_2
+ctx.fillText("250 KB", 325,466);    // Block_N_3
+ctx.fillText("250 KB", 535,466);    // Block_N_N
+
+// Arrows
+canvas_arrow(ctx, 415, 110, 500, 110);
+canvas_arrow(ctx, 435, 260, 500, 260);
+canvas_arrow(ctx, 415, 460, 500, 460);
+
+canvas_arrow(ctx, 330, 315, 330, 385);
+
+
+function canvas_arrow(ctx, fromx, fromy, tox, toy){
+    var headlen = 10;   // length of head in pixels
+    var angle = Math.atan2(toy-fromy,tox-fromx);
+    ctx.beginPath();
+    ctx.moveTo(fromx, fromy);
+    ctx.lineTo(tox, toy);
+    ctx.lineTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
+    ctx.moveTo(tox, toy);
+    ctx.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
+    ctx.closePath();
+    ctx.stroke();
+}
+
+</script>
+
+<p>Whenever we create a memory pool, we need to store its ID for further access. When we have more than one memory pool, switching from one to another can easily be done with its ID. So to allocate memory from a particular memory pool, we can either make that memory pool currently active, we can push it in the memory pools stack, or we can specify it directly during allocation as parameter.</p>
+
+<p>When we do not need the content of a memory pool (i.e. the allocated memory from all its blocks), we can clear its content for a later use, this will make all the memory in that particular pool immediately  available for a later use in the program. But in case we do not need the pool anymore we can directly delete it, this will release from the heap all the allocated resources for that particular pool. In the same way, before the program ends we have to release the memory allocated for all memory pools, this can be done with just one single command.</p>
+
+<p>The memory pool manager offers a couple of tools that could be helpful for memory debugging purposes. It offers the statistics of usage of all memory pools printed to a defined output. This includes its ID, name, number of blocks assigned, total memory used and total of free memory. Additionally to the statistics, the memory pool manager can also dump to a text file the content of all the memory pools in hexadecimal format, this is split by pool and by assigned blocks.</p>
+
+<p>A feature for defining an own customized trace function is also provided, this will be used by the above functionalities for displaying the provided information in the desired format and to the desired file descriptor.</p>
+
+<p>The manager does not display any errors on the screen, in case of error the client code should check the return code of each of the functions and display the corresponding error message. For helping on this task, a function is provided which shows a descriptive message in case an error is encountered.</p>
+
+<p>It is safe to use the memory pool manager in a multithreading environment. A few conditions should be kept for the correct operation. Firstly the default memory pool should not be used by any other thread than the main one. And secondly every thread should create and use its own memory pool. The attempt by a thread of using the pool of a different thread will lead to an error. </p>
+
+<p>On the second version of the library the memory pool manager was adapted to run also on the Windows platform additionally to the already supported Unix/Linux platform.</p>
+
+<p>The T3E Memory Pool also communicates with valgrind for a more accurate memory check when debugging with this tool on the Linux platform. </p>
+
+<p>Functions for allocation of  memory aligned to a particular multiple of memory address are provided. The memory delivered is aligned by default to 8 bytes</p>
+
+<p>&nbsp;</p>
+<h2><a id="Getting_Started"></a>3. Getting started</a></h2>
+
+<h3>3.1. Package Folder Structure</h3>
+
+<p>
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.0em .0em .0em .0em;padding:.2em .6em;">
+  <pre style="font-size: 14px; font-family:'Courier New', Courier, monospace; margin: 0; line-height: 125%">
+mp                                  <span class="style2">Root directory</span>
++-- ChangeLog                       <span class="style2">Release notes</span>
++-- libmp.a                         <span class="style2">Library compiled on Linux SuSE 13.1 with gcc 4.8.1</span>
++-- makefile                        <span class="style2">Builds library and test files on unix-like platforms</span>
++-- MANUAL.html                     <span class="style2">This documentation</span>
++-- mp.lib                          <span class="style2">Library compiled on Windows with MSVC 2008</span>
++-- src                             <span class="style2">Library source code</span>
+¦   +-- mp.c                        <span class="style2">Main functions of the memory pool</span>
+¦   +-- mp.h                        <span class="style2">Public header file</span>
+¦   +-- mp_os.c                     <span class="style2">OS Specific functions</span>
+¦   +-- mp_os.h                     <span class="style2">OS Specific definitions</span>
+¦   +-- mp_rep.c                    <span class="style2">Reporting functions</span>
+¦   +-- mp_trc.c                    <span class="style2">Tracing functions</span>
+¦   +-- mp_trc.h                    <span class="style2">Tracing functions definitions</span>
++-- tst                             <span class="style2">Test files source code</span>
+¦   +-- mptst.c                     <span class="style2">Testing all available functions</span>
+¦   +-- mptst.exe                   <span class="style2">Test file compiled on Windows with MSVC 2008</span>
+¦   +-- mptst_thrd.c                <span class="style2">Testing the multithreading capabilities</span>
+¦   +-- test_thread.exe             <span class="style2">Test file compiled on Windows with MSVC 2008</span>
++-- ut                              <span class="style2">Unit test folder</span>
+¦   +-- ut_mp.c                     <span class="style2">Generated by &quot;check&quot;</span>
+¦   +-- ut_mp.check                 <span class="style2">Unit test of main functions</span>
+¦   +-- ut_mp_rep.c                 <span class="style2">Generated by &quot;check&quot;</span>
+¦   +-- ut_mp_rep.check             <span class="style2">Unit test of reporting functions</span>
+¦   +-- ut_mp_trc.c                 <span class="style2">Generated by &quot;check&quot;</span>
+¦   +-- ut_mp_trc.check             <span class="style2">Unit test of tracing functions</span>
++-- valgrind                        <span class="style2">Valgrind dummy</span>
+¦   +-- valgrind.h                  <span class="style2">Checks if Valgrind is installed or not</span>
++-- win                             <span class="style2">Windows projects</span>
+¦   +-- lib                         <span class="style2">For compiling the library</span>
+¦   ¦   +-- win_lib.sln
+¦   ¦   +-- win_lib.vcproj
+¦   +-- mptst                       <span class="style2">For compiling the testing file</span>
+¦   ¦   +-- mptst.sln
+¦   ¦   +-- mptst.vcproj
+¦   +-- mptst_thrd                  <span class="style2">For compiling the threading testing file</span>
+¦       +-- mptst_thrd.sln
+¦       +-- mptst_thrd.vcproj
++-- exm                             <span class="style2">Example code</span>
+    +-- example01.c
+    +-- example02.c
+    +-- example03.c
+    +-- example04.c
+    +-- makefile
+</pre>
+</div>
+
+</p>
+
+<h3>3.2. Build</h3>
+
+<p>The library can be downloaded from <a href="http://tap3edit.com/en_4_1_tools.php" target="_blank">here</a>. On Unix-like platforms the library can be built by just running the make command on the root directory of the package, this creates the static library &quot;libmp.a&quot; in that folder. The compiler &quot;gcc&quot; is used, if needed other compilers can be used (e.g. CC on Solaris) by editing the makefile. </p>
+
+<p>On Windows a provided Visual Studio C project (win_lib) can be opened and by right-clicking on the project's name and selecting &quot;build&quot;, the library called &quot;mp.lib&quot; is created inside the &quot;Debug&quot; folder.</p>
+<p>The multi-threading support is active by default, on Unix-like platforms this requires to compile with the POSIX pthread library. In case the T3E Memory Pool library is not used in a multi-threading environment, this can be turned off by setting the macro MP_THREAD_SAFE to 0 in the &quot;mp.h&quot; file before the build.. </p>
+<h3>3.3. Installation</h3>
+<p>The library doesn't need any particular installation, it  can simply be added to your projects.<br />
+On Unix-like platforms just add the &quot;mp.h&quot; header file and the library &quot;libmp.a&quot; to be accessible to your project via your makefile, or from the command line.<br />
+On Windows add the &quot;mp.h&quot; header file to your project and the path to the &quot;mp.lib&quot; library to the Linker's input configuration.</p>
+
+<h3>3.4. Usage in programs</h3>
+<p>The T3E Memory Pool instructions can be used in any program by just including the header file &quot;mp.h&quot; at the top of each source code file.</p>
+
+<h3>3.5. Application (quick start)</h3>
+
+<p>Following code shows a very simple example on how the T3E Memory Pool manager works. It uses the function mpmalloc() to allocate memory for the 10 elements of an array of integers. The allocation is done from the default memory pool. Each element is assigned with a value which later, in a different pool, is printed out to the screen. The function mpdel_all() is then used to delete the memory pool and to release all the allocated memory from the heap.. </p>
+<p> 
+
+<div style="background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .1em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #BC7A00">#include &lt;stdio.h&gt;</span>
+<span style="color: #BC7A00">#include &quot;mp.h&quot;</span>
+
+<span style="color: #B00040">int</span> <span style="color: #0000FF">main</span>(<span style="color: #B00040">int</span> argc, <span style="color: #B00040">char</span> <span style="color: #666666">*</span>argv[])
+{
+    <span style="color: #B00040">int</span> i <span style="color: #666666">=</span> <span style="color: #666666">0</span>;
+    <span style="color: #B00040">int</span> <span style="color: #666666">*</span>j[<span style="color: #666666">10</span>] <span style="color: #666666">=</span> {<span style="color: #666666">0</span>}; <span style="color: #408080; font-style: italic">/* Array of 10 integer pointers */</span>
+
+    <span style="color: #408080; font-style: italic">/* Loop the array of pointers */</span>
+    <span style="color: #008000; font-weight: bold">for</span>(i <span style="color: #666666">=</span> <span style="color: #666666">0</span>; i <span style="color: #666666">&lt;</span> <span style="color: #666666">10</span>; i<span style="color: #666666">++</span>)
+    {
+        <span style="color: #408080; font-style: italic">/* Allocatest memory in our default memory pool */</span>
+        j[i] <span style="color: #666666">=</span> mpmalloc(<span style="color: #008000; font-weight: bold">sizeof</span>(<span style="color: #B00040">int</span>));
+        <span style="color: #408080; font-style: italic">/* Assignes to the allocated integer a certain value */</span>
+        <span style="color: #666666">*</span>j[i] <span style="color: #666666">=</span> i <span style="color: #666666">*</span> <span style="color: #666666">2</span>;
+    }
+
+    <span style="color: #408080; font-style: italic">/* Loop the array of pointers */</span>
+    <span style="color: #008000; font-weight: bold">for</span>(i <span style="color: #666666">=</span> <span style="color: #666666">0</span>; i <span style="color: #666666">&lt;</span> <span style="color: #666666">10</span>; i<span style="color: #666666">++</span>)
+    {
+        <span style="color: #408080; font-style: italic">/* Print out the values of each of the integer pointers */</span>
+        printf(<span style="color: #BA2121">&quot;j[%d] = %d</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>, i, <span style="color: #666666">*</span>j[i]);
+    }
+
+    <span style="color: #408080; font-style: italic">/* Release allocated memory */</span>
+    mpdel_all();
+
+    <span style="color: #008000; font-weight: bold">return</span> <span style="color: #666666">0</span>;
+}
+</pre></div>
+
+
+</p>
+<p>&nbsp;</p>
+<h2><a id="Sample_Code"></a>4. Sample code</a></h2>
+<p>All sample codes can be found in the folder examples inside the library package and can be compiled with the make command. For compiling a certain example in particular the following command can be used on Linux e.g.:</p>
+
+<p>
+
+<div style="background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .1em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%">gcc sample01.c -I../src -L../. -lmp -pthread -o sample01
+</pre></div>
+
+
+</p>
+<p>The following code shows a basic example on how to use more than one memory pool at the same time. First it starts by using the function mpmalloc() to allocate a piece of memory from the default memory pool. The same operation is done later but each time from a different memory pool which were first created and then set for use (with mpset()). At the end before removing all memory pools with the function mpdel_all() another function called mpprn() is used for printing out on the screen the statistics of each of the pools used. </p>
+
+<p>
+<!-- HTML generated using hilite.me --><div style="background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .1em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #BC7A00">#include &lt;stdio.h&gt;</span>
+<span style="color: #BC7A00">#include &quot;mp.h&quot;</span>
+
+<span style="color: #B00040">int</span> <span style="color: #0000FF">main</span>(<span style="color: #B00040">int</span> argc, <span style="color: #B00040">char</span> <span style="color: #666666">*</span>argv[])
+{
+    <span style="color: #B00040">int</span> mpid1 <span style="color: #666666">=</span> MP_NO_MP_ID;    <span style="color: #408080; font-style: italic">/* Memory pool ID 1 */</span>
+    <span style="color: #B00040">int</span> mpid2 <span style="color: #666666">=</span> MP_NO_MP_ID;    <span style="color: #408080; font-style: italic">/* Memory pool ID 2 */</span>
+    <span style="color: #B00040">char</span> <span style="color: #666666">*</span>strdef <span style="color: #666666">=</span> <span style="color: #008000">NULL</span>;
+    <span style="color: #B00040">char</span> <span style="color: #666666">*</span>str1 <span style="color: #666666">=</span> <span style="color: #008000">NULL</span>;
+    <span style="color: #B00040">char</span> <span style="color: #666666">*</span>str2 <span style="color: #666666">=</span> <span style="color: #008000">NULL</span>;
+
+    <span style="color: #408080; font-style: italic">/* At this moment no memory pool was created, </span>
+<span style="color: #408080; font-style: italic">     * so the default one is used */</span>
+    strdef <span style="color: #666666">=</span> mpmalloc(<span style="color: #008000; font-weight: bold">sizeof</span>(<span style="color: #B00040">char</span>) <span style="color: #666666">*</span> <span style="color: #666666">20</span>);
+    sprintf(strdef, <span style="color: #BA2121">&quot;This is default mp&quot;</span>);
+
+    <span style="color: #408080; font-style: italic">/* Here we create memory pool 1 */</span>
+    mpid1 <span style="color: #666666">=</span> mpnew(<span style="color: #BA2121">&quot;MP 1&quot;</span>);
+    mpset(mpid1); <span style="color: #408080; font-style: italic">/* In order to use the new pool </span>
+<span style="color: #408080; font-style: italic">                     we need to make it active */</span>
+    str1 <span style="color: #666666">=</span> mpmalloc(<span style="color: #008000; font-weight: bold">sizeof</span>(<span style="color: #B00040">char</span>) <span style="color: #666666">*</span> <span style="color: #666666">20</span>);
+    sprintf(str1, <span style="color: #BA2121">&quot;This is mp 1&quot;</span>);
+
+    <span style="color: #408080; font-style: italic">/* Here we create memory pool 2 */</span>
+    mpid2 <span style="color: #666666">=</span> mpnew(<span style="color: #BA2121">&quot;MP 2&quot;</span>);
+    mpset(mpid2); <span style="color: #408080; font-style: italic">/* In order to use the new pool </span>
+<span style="color: #408080; font-style: italic">                     we need to make it active */</span>
+    str2 <span style="color: #666666">=</span> mpmalloc(<span style="color: #008000; font-weight: bold">sizeof</span>(<span style="color: #B00040">char</span>) <span style="color: #666666">*</span> <span style="color: #666666">20</span>);
+    sprintf(str2, <span style="color: #BA2121">&quot;This is mp 2&quot;</span>);
+
+    printf(<span style="color: #BA2121">&quot;strdef: &lt;%s&gt;</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>, strdef);
+    printf(<span style="color: #BA2121">&quot;str1: &lt;%s&gt;</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>, str1);
+    printf(<span style="color: #BA2121">&quot;str2: &lt;%s&gt;</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>, str2);
+    <span style="color: #408080; font-style: italic">/* Print the usage statistics of all memory pools */</span>
+    mpprn();
+
+    <span style="color: #408080; font-style: italic">/* Delete all memory pools. This releases all memory allocated */</span>
+    mpdel_all();
+
+    <span style="color: #008000; font-weight: bold">return</span> <span style="color: #666666">0</span>;
+}
+</pre></div>
+
+
+
+</p>
+<p>The output would be following</p>
+
+<p>
+<!-- HTML generated using hilite.me --><div style="font-size: 15px; background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .1em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%">strdef: &lt;This is default mp&gt;
+str1: &lt;This is mp 1&gt;
+str2: &lt;This is mp 2&gt;
+<span style="color: #666666">==============================================================================</span>
+MPID Descr           Blocks   Size       Used       %        Free       %
+------------------------------------------------------------------------------
+   0 Default         1        250.0Kb    20.0b      %0.01    250.0Kb    %99.99 
+   1 MP 1            1        250.0Kb    20.0b      %0.01    250.0Kb    %99.99 
+   2 MP 2            1        250.0Kb    20.0b      %0.01    250.0Kb    %99.99 
+------------------------------------------------------------------------------
+Total                3        750.0Kb    60.0b      %0.01    750.0Kb    %99.99 
+<span style="color: #666666">==============================================================================</span>
+</pre></div>
+</p>
+
+<p>Following we have a more realistic usage of two memory pools application. The idea is to use one of the pools for allocating memory for the structures and the other one for the allocation of their elements.</p>
+<p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .1em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #BC7A00">#include &lt;stdio.h&gt;</span>
+<span style="color: #BC7A00">#include &quot;mp.h&quot;</span>
+
+<span style="color: #B00040">int</span> elem_mpid <span style="color: #666666">=</span> MP_NO_MP_ID;    <span style="color: #408080; font-style: italic">/* Memory pool ID for elements */</span>
+<span style="color: #B00040">int</span> struct_mpid <span style="color: #666666">=</span> MP_NO_MP_ID;    <span style="color: #408080; font-style: italic">/* Memory pool ID for the structures */</span>
+
+<span style="color: #008000; font-weight: bold">typedef</span> <span style="color: #008000; font-weight: bold">struct</span> <span style="color: #B00040">myst_t</span>
+{
+    <span style="color: #B00040">int</span> id;
+    <span style="color: #B00040">char</span> <span style="color: #666666">*</span>name;
+    <span style="color: #B00040">char</span> <span style="color: #666666">*</span>desc;
+} <span style="color: #B00040">myst_t</span>;
+
+<span style="color: #B00040">int</span> <span style="color: #0000FF">alloc_elem</span>(<span style="color: #B00040">myst_t</span> <span style="color: #666666">*</span>arr_st, <span style="color: #B00040">int</span> id);
+<span style="color: #B00040">int</span> <span style="color: #0000FF">alloc_struct</span>(<span style="color: #B00040">myst_t</span> <span style="color: #666666">**</span>arr_st, <span style="color: #B00040">int</span> id);
+
+<span style="color: #B00040">int</span> <span style="color: #0000FF">main</span>(<span style="color: #B00040">int</span> argc, <span style="color: #B00040">char</span> <span style="color: #666666">*</span>argv[])
+{
+    <span style="color: #B00040">int</span> i <span style="color: #666666">=</span> <span style="color: #666666">0</span>;
+    <span style="color: #B00040">myst_t</span> <span style="color: #666666">*</span>arr_st[<span style="color: #666666">10</span>] <span style="color: #666666">=</span> {<span style="color: #666666">0</span>};       <span style="color: #408080; font-style: italic">/* Array of 10 pointers of myst_t */</span>
+    <span style="color: #B00040">char</span> <span style="color: #666666">*</span>title <span style="color: #666666">=</span> <span style="color: #008000">NULL</span>;
+
+    <span style="color: #408080; font-style: italic">/* Create 2 memory pools, one for structures and one for their </span>
+<span style="color: #408080; font-style: italic">     * elements */</span>
+    struct_mpid <span style="color: #666666">=</span> mpnew(<span style="color: #BA2121">&quot;Structures&quot;</span>);
+    elem_mpid <span style="color: #666666">=</span> mpnew(<span style="color: #BA2121">&quot;Elements&quot;</span>);
+
+    <span style="color: #408080; font-style: italic">/* To use those memory pools, mpset() should be used, otherwise</span>
+<span style="color: #408080; font-style: italic">     * the default memory pool is used as in following case */</span>
+    title <span style="color: #666666">=</span> mpmalloc(<span style="color: #008000; font-weight: bold">sizeof</span>(<span style="color: #B00040">char</span>) <span style="color: #666666">*</span> <span style="color: #666666">20</span>);
+    sprintf(title, <span style="color: #BA2121">&quot;Example Number 03&quot;</span>);
+
+    <span style="color: #408080; font-style: italic">/* To access the default memory pool again the following command </span>
+<span style="color: #408080; font-style: italic">     * should be used: mpset(MP_DEF_MP_ID); */</span>
+
+    <span style="color: #408080; font-style: italic">/* Loop the pointers of structures and call allocation for </span>
+<span style="color: #408080; font-style: italic">     * each one */</span>
+    <span style="color: #008000; font-weight: bold">for</span>(i <span style="color: #666666">=</span> <span style="color: #666666">0</span>; i <span style="color: #666666">&lt;</span> <span style="color: #666666">10</span>; i<span style="color: #666666">++</span>)
+    {
+        alloc_struct(<span style="color: #666666">&amp;</span>arr_st[i], i);
+    } 
+    
+    <span style="color: #408080; font-style: italic">/* Print each of the structures new information */</span>
+    printf(<span style="color: #BA2121">&quot;%s</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>, title);
+    <span style="color: #008000; font-weight: bold">for</span>(i <span style="color: #666666">=</span> <span style="color: #666666">0</span>; i <span style="color: #666666">&lt;</span> <span style="color: #666666">10</span>; i<span style="color: #666666">++</span>)
+    {
+        printf(<span style="color: #BA2121">&quot;Array Info -&gt; ID &lt;%d&gt;, Name: &lt;%s&gt;, Description: &lt;%s&gt;</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>, 
+                arr_st[i]<span style="color: #666666">-&gt;</span>id, arr_st[i]<span style="color: #666666">-&gt;</span>name, arr_st[i]<span style="color: #666666">-&gt;</span>desc);
+    }
+
+    <span style="color: #408080; font-style: italic">/* Print the statistics of all memory pools */</span>
+    mpprn();
+
+    <span style="color: #408080; font-style: italic">/* Delete all memory pools */</span>
+    mpdel_all();
+
+    <span style="color: #008000; font-weight: bold">return</span> <span style="color: #666666">0</span>;
+}
+
+<span style="color: #B00040">int</span> <span style="color: #0000FF">alloc_struct</span>(<span style="color: #B00040">myst_t</span> <span style="color: #666666">**</span>arr_st, <span style="color: #B00040">int</span> id)
+{
+    <span style="color: #408080; font-style: italic">/* We set the memory pool for structures */</span>
+    mpset(struct_mpid);
+
+    <span style="color: #408080; font-style: italic">/* Allocate the memory needed for our structure */</span>
+    <span style="color: #666666">*</span>arr_st <span style="color: #666666">=</span> mpmalloc(<span style="color: #008000; font-weight: bold">sizeof</span>(<span style="color: #B00040">myst_t</span>));
+
+    <span style="color: #408080; font-style: italic">/* Now call the allocation of its elements */</span>
+    alloc_elem(<span style="color: #666666">*</span>arr_st, id);
+
+    <span style="color: #008000; font-weight: bold">return</span> <span style="color: #666666">0</span>;
+}
+
+<span style="color: #B00040">int</span> <span style="color: #0000FF">alloc_elem</span>(<span style="color: #B00040">myst_t</span> <span style="color: #666666">*</span>arr_st, <span style="color: #B00040">int</span> id)
+{
+    <span style="color: #B00040">int</span> save_mpid <span style="color: #666666">=</span> mpget();        <span style="color: #408080; font-style: italic">/* Saves prev. set memory pool ID */</span>
+
+    <span style="color: #408080; font-style: italic">/* Now we make active the memory pool for processing our elements */</span>
+    mpset(elem_mpid);
+
+    arr_st<span style="color: #666666">-&gt;</span>id <span style="color: #666666">=</span> id;
+    <span style="color: #408080; font-style: italic">/* Allocate the strings */</span>
+    arr_st<span style="color: #666666">-&gt;</span>name <span style="color: #666666">=</span> mpmalloc(<span style="color: #008000; font-weight: bold">sizeof</span>(<span style="color: #B00040">char</span>) <span style="color: #666666">*</span> <span style="color: #666666">20</span>);
+    sprintf(arr_st<span style="color: #666666">-&gt;</span>name, <span style="color: #BA2121">&quot;Struct %d&quot;</span>, id);
+    arr_st<span style="color: #666666">-&gt;</span>desc <span style="color: #666666">=</span> mpmalloc(<span style="color: #008000; font-weight: bold">sizeof</span>(<span style="color: #B00040">char</span>) <span style="color: #666666">*</span> <span style="color: #666666">40</span>);
+    sprintf(arr_st<span style="color: #666666">-&gt;</span>desc, <span style="color: #BA2121">&quot;This is the structure number %d&quot;</span>, id);
+
+    <span style="color: #408080; font-style: italic">/* Now we go back to the previously set memory pool, before </span>
+<span style="color: #408080; font-style: italic">     * leaving the function */</span>
+    mpset(save_mpid);
+
+    <span style="color: #008000; font-weight: bold">return</span> <span style="color: #666666">0</span>;
+}
+</pre></div>
+
+</p>
+
+<p>Following the output</p>
+
+<p>
+
+<!-- HTML generated using hilite.me --><div style="font-size: 14px; background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .1em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%">Example Number 03
+Array Info -&gt; ID &lt;0&gt;, Name: &lt;Struct 0&gt;, Description: &lt;This is the structure number 0&gt;
+Array Info -&gt; ID &lt;1&gt;, Name: &lt;Struct 1&gt;, Description: &lt;This is the structure number 1&gt;
+Array Info -&gt; ID &lt;2&gt;, Name: &lt;Struct 2&gt;, Description: &lt;This is the structure number 2&gt;
+Array Info -&gt; ID &lt;3&gt;, Name: &lt;Struct 3&gt;, Description: &lt;This is the structure number 3&gt;
+Array Info -&gt; ID &lt;4&gt;, Name: &lt;Struct 4&gt;, Description: &lt;This is the structure number 4&gt;
+Array Info -&gt; ID &lt;5&gt;, Name: &lt;Struct 5&gt;, Description: &lt;This is the structure number 5&gt;
+Array Info -&gt; ID &lt;6&gt;, Name: &lt;Struct 6&gt;, Description: &lt;This is the structure number 6&gt;
+Array Info -&gt; ID &lt;7&gt;, Name: &lt;Struct 7&gt;, Description: &lt;This is the structure number 7&gt;
+Array Info -&gt; ID &lt;8&gt;, Name: &lt;Struct 8&gt;, Description: &lt;This is the structure number 8&gt;
+Array Info -&gt; ID &lt;9&gt;, Name: &lt;Struct 9&gt;, Description: &lt;This is the structure number 9&gt;
+<span style="color: #666666">==============================================================================</span>
+MPID Descr           Blocks   Size       Used       %        Free       %
+------------------------------------------------------------------------------
+   0 Default         1        250.0Kb    20.0b      %0.01    250.0Kb    %99.99 
+   1 Structures      1        250.0Kb    156.0b     %0.06    249.9Kb    %99.94 
+   2 Elements        1        250.0Kb    640.0b     %0.25    249.4Kb    %99.75 
+------------------------------------------------------------------------------
+Total                3        750.0Kb    816.0b     %0.11    749.2Kb    %99.89 
+<span style="color: #666666">==============================================================================</span>
+</pre></div>
+
+</p>
+
+<p>Additional examples can be found also in the root folder of the package. The file &quot;test.c&quot; has a system test of all the single functions available in the package. The file &quot;test_thread.c&quot; does a system test of the initialization of the memory pools for threads. Both are automatically built when building the project on a Unix-like platform. MSVS projects for these two are also available in the package (&quot;win_test&quot; and &quot;win_test_thread&quot; respectively) </p>
+<h2><a id="Reference_Material"></a>5. Reference material</a></h2>
+<dt>mpnew</dt>
+<dd>
+<p><strong>int mpnew(char *descr;</strong>)</p>
+
+<p>The mpnew() function creates/initializes a new memory pool with the description pointed to by descr. If the descr is NULL then &quot;-&quot; is used as description. If the manager runs in a multithreading environment it assigns the thread ID to the memory pool so that only that thread can access it during its lifetime.</p>
+
+<p>This function returns the memory pool ID of the allocated memory pool.</p>
+</dd>
+<dt>mppush</dt>
+<dd>
+<p><strong>int mppush(int mpid);</strong></p>
+
+<p>The mppush() function moves the current memory pool ID to the stack and makes mpid the current one. The stack has only one element, for now.</p>
+
+<p>Upon successful completion this function returns MP_ERRNO_SUCCESS. In case mpid is out of the limits of allowed memory pools IDs, it returns MP_ERRNO_MPID. And in case the memory pool corresponding to mpid is not initialized with mpnew() then the function returns MP_ERRNO_NOIN.</p>
+</dd>
+<dt>mppop</dt>
+<dd>
+<p><strong>int mppop();</strong></p>
+
+<p>The mppop() function sets the previous Memory Pool ID moved to the stack by mppush() as the current one.</p>
+
+<p>When no error, the function returns MP_ERRNO_SUCCESS. In case there was no memory pool ID stored in the stack the function returns MP_ERRNO_NOPP.</p>
+
+<dt>mpget</dt>
+<dd>
+<p><strong>int mpget();</strong></p>
+
+<p>The mpget() function gets the current memory pool ID set by mpset() and the one which is currently used for the allocation.</p>
+
+<p>This function returns the actual memory pool ID.</p>
+</dd>
+<dt>mpset</dt>
+<dd>
+<p><strong>int mpset(int mpid);</strong></p>
+
+<p>The mpset() function tells the memory pool manager that mpid should be the active memory pool from which all further allocations are made.</p>
+
+<p>Upon successful completion this function returns MP_ERRNO_SUCCESS. If the memory pool referred by mpid is not yet initialized by mpnew() then it returns MP_ERRNO_NOIN. If mpid is out the limits allowed by the library then the function returns MP_ERRNO_MPID. If the thread trying to set the memory pool is not the same one that initialized/created it with mpnew() it returns MP_ERRNO_THRD.</p>
+</dd>
+<dt>mpdel</dt>
+<dd>
+<p><strong>int mpdel(int mpid);</strong></p>
+
+<p>The mpdel() function frees all resources (memory blocks) allocated for the memory pool referrenced by mpid and initializes  it, this last happens unless mpid refers to the default memory pool, which cannot be uninitialized.</p>
+
+<p>On successful completion this function returns MP_ERRNO_SUCCESS. If mpid is out the limits allowed by the library then the function returns MP_ERRNO_MPID. If the thread trying to delete the memory pool is not the same one that initialized/created it with mpnew() it returns MP_ERRNO_THRD.</p>
+</dd>
+<dt>mpdel_all</dt>
+<dd>
+<p><strong>int mpdel_all();</strong></p>
+
+<p>The mpdel_all() function frees the resources (memory blocks) allocated for each of the memory pools and initializes  each of the pools except by the default one, which is always kept initialized.</p>
+
+<p>Note: This function should always be called by the main thread and only when all the other threads stopped using any of the memory pools. Doing otherwise may cause unexpected behaviour.</p>
+
+<p>This function always returns MP_ERRNO_SUCCESS.</p>
+</dd>
+<dt>mpclr</dt>
+<dd>
+<p><strong>int mpclr(int mpid);</strong></p>
+
+<p>The mpclr() function resets to zero all the memory usage pointers used by the memory pool referred by mpid making immediate availability of the memory blocks allocated for that pool.</p>
+
+<p>On successful completion this function returns MP_ERRNO_SUCCESS. If mpid is out the limits allowed by the library then the function returns MP_ERRNO_MPID. If the thread trying to clear the memory pool is not the same one that initialized/created it using mpnew() it returns MP_ERRNO_THRD.</p>
+</dd>
+<dt>mpprn</dt>
+<dd>
+<p><strong>void mpprn();</strong></p>
+
+<p>The mpprn() function prints on the screen the different information of each of the created/initialized memory pools. For the display it uses the output set by the function mptrc_set_fn() or the default standard output if no other output was set.</p>
+
+<p>The information showed in the statistics are the memory pool ID, the memory pool name, the number of memory blocks assigned to that pool, the total memory size allocated for all the blocks, the total free memory among all memory pools and the percentages of used and free memory.</p>
+
+<p>Example of the output:</p>
+
+<!-- HTML generated using hilite.me --><div style="font-size: 14px; background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.0em .0em .0em .0em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #666666">==============================================================================</span>
+MPID Descr           Blocks   Size       Used       %        Free       %
+------------------------------------------------------------------------------
+   0 Default         1        250.0Kb    20.0b      %0.01    250.0Kb    %99.99 
+   1 Memory Pool 1   1        250.0Kb    156.0b     %0.06    249.9Kb    %99.94 
+   2 Memory Pool 2   1        250.0Kb    0.0b       %0.00    250.0Kb    %100.00
+------------------------------------------------------------------------------
+Total                3        750.0Kb    176.0b     %0.02    749.8Kb    %99.98 
+<span style="color: #666666">==============================================================================</span>
+</pre></div>
+
+
+<p>This function doesn't returns any value.</p>
+</dd>
+<dt>mpdmp()</dt>
+<dd>
+<p><strong>int mpdmp(char *filename);</strong></p>
+
+<p>The function mpdmp() dumps to the file pointed by filename the content of the memory allocated for each of memory blocks assigned to the initialized  memory pools. The filename can contain the file path, if no path is specified the file is created in the current directory.</p>
+
+<p>The function will try to skip dumping zero bytes blocks and it will replace them with the string &quot;(skipped zero bytes...)&quot;</p>
+
+<p>The dump is split by memory pool, showing the memory pool ID and its name, and by its memory blocks, showing in the title the sequence of the block number, its size and its range of memory address.</p>
+
+<p>Upon successfully termination this function returns MP_ERRNO_SUCCESS. If the function is called with filename equal NULL then it returns MP_ERRNO_PARM. In case there is any error delivered by the system function fopen() when opening the file, the function returns MP_ERRNO_SYSE, the mperrno variable is also set with the same value in order to get the corresponding error message with mpstrerror().</p>
+
+<p>Example of the output dumped  to filename:</p>
+
+<!-- HTML generated using hilite.me --><div style="font-size: 14px; background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.0em .0em .0em .0em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #666666">==================================================================================</span>
+Memory pool dump <span style="color: #666666">(</span>Report of memory used<span style="color: #666666">)</span>                      2014/10/12 15:19:32
+----------------------------------------------------------------------------------
+Memory pool: Default <span style="color: #666666">(</span>ID: 0<span style="color: #666666">)</span>
+----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+Block number: 1 size: 9.8Kb from: 0x95f89c0 to 0x95fb10f
+----------------------------------------------------------------------------------
+0x000000095f89c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+<span style="color: #666666">(</span>skipped zero bytes...<span style="color: #666666">)</span>
+0x000000095fb100: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+----------------------------------------------------------------------------------
+</pre></div>
+</dd>
+<p></p>
+<dt>mpset_memlim</dt>
+<dd>
+<p><strong>void mpset_memlim(size_t size);</strong></p>
+
+<p>The mpset_memlim() function allows setting the maximum memory limit in bytes that can be allocated by all memory pools at the same time. Any attempt of allocation above this limit causes an error. The default maximum memory limit set automatically by the manager during startup is of 3 GB for 32 bits platforms and 5 GB for 64 bits platforms. </p>
+
+<p>This function does not returns any value.</p>
+</dd>
+<dt>mpget_memlim</dt>
+<dd>
+<p><strong>size_t mpget_memlim();</strong></p>
+
+<p>The mpget_memlim() function delivers the current maximum memory limit of the memory pool manager in bytes.</p>
+</dd>
+<dt>mpset_blksz</dt>
+<dd>
+<p><strong>void mpset_blksz(size_t size);</strong></p>
+
+<p>The function mpset_blksz() allows setting the size in bytes of the blocks that are allocated for each memory pool. The default size used by the manager is of 250 KB.</p>
+
+<p>This function does not returns any value.</p>
+</dd>
+<dt>mpget_blksz</dt>
+<dd>
+<p><strong>size_t mpget_blksz();</strong></p>
+
+<p>The mpget_blksz() function returns the size of the memory blocks used by the manager for allocating memory from the heap for each of the memory pools.</p>
+</dd>
+<dt>mpmalloc, mpfree, mpcalloc, mprealloc, mpmemalign, mpmalloc_mpid, mpfree_mpid, mpcalloc_mpid, mprealloc_mpid, mpmemalign_mpid</dt>
+<dd>
+<p><strong>void *mpmalloc(size_t size);<br />
+void mpfree(void *ptr);<br />
+void *mpcalloc(size_t nelem, size_t size);<br />
+void *mprealloc(void *ptr, size_t size);<br />
+void *mpmemalign(size_t alignment, size_t size);</strong></p>
+
+<p><strong>void *mpmalloc_mpid(size_t size, int mpid);<br />
+void *mpcalloc_mpid(size_t nelem, size_t size, int mpid);<br />
+void mpfree_mpid(void *ptr, int mpid);<br />
+void *mprealloc_mpid(void *ptr, size_t size, int mpid);<br />
+void *mpmemalign_mpid(size_t alignment, size_t size, int mpid);</strong></p>
+
+<p>The mpmalloc() function is analog to the malloc() function and allocates size bytes and returns a pointer to the allocated memory within the active memory pool. The memory is not initialized. If size is 0, then mpmalloc() returns anyway unique pointer.</p>
+
+<p>The mpfree() function is actually a dummy function that doesn't do anything. It exists only as analogy to the free() function. Due to the current architecture of the memory pool manager each chunk of memory requested to the manager is taken sequentially from the pool and its space is not reused until the whole pool is clear or freed  until the pool is deleted.</p>
+
+<p>The mpcalloc() function is analog to the calloc() function and allocates memory for an array of nelem elements of size bytes each and returns a pointer to the allocated memory within the active memory pool.<br />
+The memory is set to zero. If nelem or size is 0, then mpcalloc() returns anyway unique pointer.</p>
+
+<p>The mprealloc() function is analog to the realloc() function and changes the size of the memory block pointed to by ptr to size bytes. The contents will be unchanged in the range from the start of the region up to the minimum of the old and new sizes. If the new size is larger than the old size, the added memory will not be initialized. If ptr is NULL, then the call is equivalent to mpmalloc(size), for all values of size; if size is equal to zero, and ptr is not NULL, then anyway a pointer is delivered. Unless ptr is NULL, it must have been returned by an earlier call to mpmalloc(), mpcalloc() or mprealloc().</p>
+
+<p>The function mpmemalign() is analog to the memalign() function and allocates size bytes and returns a pointer to the allocated memory within the current memory pool. The memory address will be multiple of alignment, which must be a power of two and a multiple of sizeof(void *). If size is 0 then mpmemalign returns anyway an unique pointer.</p>
+
+<p>The functions mpmalloc_mpid(), mpfree_mpid(), mpcalloc_mpid(), mprealloc_mpid() and mpmemalign_mpid() are equivalent to the functions mpmalloc(), mpfree(), mpcalloc(), mprealloc() and mpmemalign() respectively, except that they are called additionally with mpid, which indicates explicitely from which particular memory pool that chunk of memory will be taken, no matter what the currently active memory pool is.</p>
+</dd>
+<dt>mpstrdup, mpstrdup_mpid</dt>
+<dd>
+<p><strong>char *mpstrdup(const char *s1);<br />
+char *mpstrdup_mpid(const char *s1, int mpid);</strong></p>
+
+<p>The mpstrdup() function is analog to the strdup() function and returns a pointer to the new string which is a duplicate of the string s1. Memory for the new string is obtained with mpmalloc() from the currently active memory pool.</p>
+
+<p>The mpstrdup_mpid() function equivalent to the mpstrdup() function, except that it is called additionally with mpid, which indicates explicitlyfrom which particular memory pool that chunk of memory will be taken, no matter what the currently active memory pool is.</p>
+</dd>
+<dt>mpasprintf, mpasprintf_mpid</dt>
+<dd>
+<p><strong>int mpasprintf(char **strp, const char *fmt, ...);<br />
+int mpasprintf_mpid(char **strp, int mpid, const char *fmt, ...);</strong></p>
+
+<p>The mpasprintf() function is analog to the asprintf() function and allocates a string large enough to hold the output including the terminating null byte ('\0'), and returns a pointer to it via the first argument. </p>
+
+<p>The mpasprintf_mpid() function equivalent to the mpasprintf() function, except that it is called additionally with mpid, which indicates explicitely from which particular memory pool that chunk of memory will be taken, no matter what the currently active memory pool is.</p>
+</dd>
+<dt>mpstrerror</dt>
+<dd>
+<p><strong>char *mpstrerror();</strong></p>
+
+<p>The mpstrerror() function is analog to the strerror() function and returns a pointer to a string that describes the error code set by any of the memory pool manager functions an error is encountered. (For example if the code set by any function is MP_ERRNO_NOMM, the returned description will be &quot;Out of memory&quot;.) This string is read-only and may not be modified. The mpstrerror() is thread safe. The string always includes a terminating null byte ('\0').</p>
+
+<p>The mpstrerror() function returns the appropriate error description string, or and &quot;Error number not recognized&quot; message if the error number is unknown.</p>
+
+<p>In case the error is due to a system error, the result of the function strerror(errno) is delivered.</p>
+
+<p>The &quot;mp.h&quot; header file defines the internal integer variable mperrno, analog to errno and which is set by memory pool manager functions calls in the event of an error to indicate what went wrong. Its value is significant only when the return value of the call indicates an error (i.e. a negative value or NULL); a function that succeeds is allowed to change mperrno.</p>
+
+<p>mperrno is thread-local; setting it in one thread does not affect its value in any other thread.</p>
+
+<p>Below is a list of the symbolic error names that are defined for this library.</p>
+
+<table style="width: 622px;" border="0" cellspacing="0" cellpadding="0"><colgroup><col width="132" /> <col width="490" /> </colgroup>
+<tbody>
+<tr>
+<td class="xl65" width="199" height="20">MP_ERRSTR_MPID</td>
+<td class="xl65" width="423">Memory pool ID out of range</td>
+</tr>
+<tr>
+<td class="xl65" height="20">MP_ERRSTR_SZNG</td>
+<td class="xl65">Negative size</td>
+</tr>
+<tr>
+<td class="xl65" height="20">MP_ERRSTR_NOMM</td>
+<td class="xl65">Out of memory</td>
+</tr>
+<tr>
+<td class="xl65" height="20">MP_ERRSTR_EXMM</td>
+<td class="xl65">Memory limit exceeded</td>
+</tr>
+<tr>
+<td class="xl65" height="20">MP_ERRSTR_ALLO</td>
+<td class="xl65">Error allocating memory</td>
+</tr>
+<tr>
+<td class="xl65" height="20">MP_ERRSTR_EXAL</td>
+<td class="xl65">Alignment is not bigger than void* or not multiple of 2</td>
+</tr>
+<tr>
+<td height="20" valign="top" class="xl65">MP_ERRSTR_NOIN</td>
+<td class="xl65">Memory pool is not the default (0) and it is not initialized: use mpnew() first</td>
+</tr>
+<tr>
+<td class="xl65" height="20">MP_ERRSTR_EXMP</td>
+<td class="xl65">Limit of number of Memory Pools exceeded</td>
+</tr>
+<tr>
+<td class="xl65" height="20">MP_ERRSTR_NOPP</td>
+<td class="xl65">Nothing to pop, use first mppush()</td>
+</tr>
+<tr>
+<td class="xl65" height="20">MP_ERRSTR_DISP</td>
+<td class="xl65">Error displaying a message</td>
+</tr>
+<tr>
+<td class="xl65" height="20">MP_ERRSTR_PARM</td>
+<td class="xl65">Error on parameter passed to the function</td>
+</tr>
+<tr>
+<td class="xl65" height="20">MP_ERRSTR_THRD</td>
+<td class="xl65">Expected different thread ID</td>
+</tr>
+<tr>
+<td class="xl65" height="20">MP_ERRSTR_SYSE</td>
+<td class="xl65">(Delivers strerror(errno))</td>
+</tr>
+</tbody>
+</table>
+</dd>
+<dd>&nbsp;</dd>
+<dt>mptrc_set_fn</dt>
+<dd>
+<p><strong>int mptrc_set_fn(int (*function)(FILE *fd, char *fmt, va_list ap));</strong></p>
+
+<p>The mptrc_set_fn() function allows setting a user defined function to control the format in which the functions mpprn() and mpdmp() display their output. For example the user has a log file with a certain format, say with process ID and timestamp. Then a customized function can be implemented so mpprn() also writes the process ID and the timestamp when showing the memory pool statics.</p>
+
+<p>A way of implementation is as following example:</p>
+
+<p>
+
+<div style="background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .1em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #B00040">int</span> <span style="color: #0000FF">mytrc</span>(<span style="color: #B00040">FILE</span> <span style="color: #666666">*</span>fd, <span style="color: #B00040">char</span> <span style="color: #666666">*</span>fmt, <span style="color: #B00040">va_list</span> ap)
+{
+   <span style="color: #B00040">char</span> line[<span style="color: #666666">128</span>] <span style="color: #666666">=</span> <span style="color: #BA2121">&quot;&quot;</span>;
+
+   <span style="color: #008000; font-weight: bold">if</span> (fd <span style="color: #666666">==</span> stdout)
+   {
+       vsnprintf(line, <span style="color: #008000; font-weight: bold">sizeof</span>(line), fmt, ap);
+       printf(<span style="color: #BA2121">&quot;         %s</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>, line);
+   }
+   <span style="color: #008000; font-weight: bold">else</span>
+   {
+       vfprintf(fd, fmt, ap);
+       fprintf(fd, <span style="color: #BA2121">&quot;</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+   }
+   <span style="color: #008000; font-weight: bold">return</span> <span style="color: #666666">0</span>;
+}
+
+<span style="color: #B00040">int</span> <span style="color: #0000FF">main</span>()
+{
+   mptrc_set_fn(<span style="color: #666666">&amp;</span>mytrc);
+</pre></div>
+
+</p>
+</dd>
+</div>  <!-- span -->
+</div>  <!-- inner_container -->
+<div class="footer" >
+
+Javier Gutierrez (c) 2014-2015 
+
+</div>
+
+</div>  <!-- container -->
+</body>
+</html>
