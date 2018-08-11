@@ -2,9 +2,7 @@
 |*
 |* tap3edit Tools (http://www.tap3edit.com)
 |*
-|* $Id: mp.c 220 2018-08-11 12:57:27Z mrjones $
-|*
-|* Copyright (c) 2014, Javier Gutierrez <jgutierrez@tap3edit.com>
+|* Copyright (c) 2014-2018, Javier Gutierrez <https://github.com/tap3edit/mp>
 |* 
 |* Permission to use, copy, modify, and/or distribute this software for any
 |* purpose with or without fee is hereby granted, provided that the above
