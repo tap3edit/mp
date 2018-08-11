@@ -10,7 +10,7 @@
 |*
 |* tap3edit Tools (http://www.tap3edit.com)
 |*
-|* $Id: ut_mp.c 63 2015-01-03 22:18:39Z mrjones $
+|* $Id: ut_mp.check 63 2015-01-03 22:18:39Z mrjones $
 |*
 |* Copyright (c) 2014, Javier Gutierrez <jgutierrez@tap3edit.com>
 |* 

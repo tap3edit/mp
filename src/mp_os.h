@@ -55,6 +55,7 @@
 #       define MP_MUTEX_UNLOCK(a)   pthread_mutex_unlock(a)             /* Mutex unlock */
 #       define MP_THREAD_T          pthread_t                           /* Thread datatype */
 #       define MP_TLS_INT           __thread int                        /* TLS int */
+#       define MP_TLS_CHAR          __thread char                       /* TLS char */
 #       define MP_CURR_THREAD       pthread_self()                      /* Returns thread Id */
 #       define MP_THREAD_EQ(a,b)    pthread_equal(a, b)                 /* Returns zero if two threads are equal */
 #   else /* } WIN32 { */
@@ -66,6 +67,7 @@
 #       define MP_MUTEX_UNLOCK(a)   LeaveCriticalSection(a)             /* Mutex unlock */
 #       define MP_THREAD_T          long
 #       define MP_TLS_INT           __declspec(thread) int
+#       define MP_TLS_CHAR          __declspec(thread) char
 #       define MP_CURR_THREAD       ((long)GetCurrentThreadId())
 #       define MP_THREAD_EQ(a,b)    (a == b)
 #   endif /* } WIN32 */
@@ -75,6 +77,7 @@
 #       define MP_MUTEX_DSTRY(a)    /* TODO */
 #       define MP_THREAD_T          char
 #       define MP_TLS_INT           int
+#       define MP_TLS_CHAR          char
 #       define MP_CURR_THREAD       ((char)'\0')
 #       define MP_THREAD_EQ(a,b)    (a == b)
 #endif /* } MP_THREAD_SAFE */

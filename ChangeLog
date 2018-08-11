@@ -1,3 +1,13 @@
+2018.08.11 00:00  Javier Gutierrez
+
+	* Fixed: Valgrind support
+
+	* Fixed: Unit testing
+
+	* Improved: Compiling under gcc 7.0
+
+    New release 0.03
+
 2015.01.24 00:00  Javier Gutierrez
 
 	* Improved: Added documentation as HTML

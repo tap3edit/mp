@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
    mystr_err = (char *)mpmalloc_mpid(sz, 98);
    if (mystr_err == NULL && mperrno != MP_ERRNO_SUCCESS)
    {
-      printf("    3.1. mpmalloc_mpid(): Correct error when using a not yet initialized memory pool ID: %s\n", mpstrerror());
+      printf("    3.1. mpmalloc_mpid(): Correct error when using a not yet initialized memory pool ID (98): %s\n", mpstrerror());
    }
    else
    {

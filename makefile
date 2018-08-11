@@ -2,7 +2,7 @@ CC = gcc
 AR = ar
 CHECKMK = checkmk
 
-PKG_VER = 0.02
+PKG_VER = 0.03
 
 SRC   = src/mp.c
 SRC  += src/mp_trc.c
@@ -62,13 +62,13 @@ ut: $(UT_MP) $(UT_MP_TRC) $(UT_MP_REP)
 	$(UT_MP_REP)
 	
 $(UT_MP): $(UT_MP_OBJ)
-	$(CC) $< -I./src -lcheck -pthread -o $@
+	$(CC) $< -I./src -lcheck -pthread -lrt -lm -lsubunit -o $@
 
 $(UT_MP_TRC): $(UT_MP_TRC_OBJ)
-	$(CC) $< -I./src -lcheck -o $@
+	$(CC) $< -I./src -lcheck -pthread -lrt -lm -lsubunit -o $@
 
 $(UT_MP_REP): $(UT_MP_REP_OBJ)
-	$(CC) $< -I./src -lcheck -o $@
+	$(CC) $< -I./src -lcheck -pthread -lrt -lm -lsubunit -o $@
 
 $(UT_MP_SRC): $(UT_MP_PC)
 	$(CHECKMK) $(UT_MP_PC) > $(UT_MP_SRC)

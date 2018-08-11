@@ -153,14 +153,14 @@ void mpprn()
         /* Print out memory pool info details */
         memset(&stat_rec, 0x00, sizeof(stat_rec));
 
-        sprintf(stat_rec.mpid       , "%*d ",     sizeof(stat_rec.mpid    ) -1,    i);
-        sprintf(stat_rec.descr      , "%-*s",     sizeof(stat_rec.descr   )   ,    mp_arr[i].descr);
-        sprintf(stat_rec.blocks     , "%-*d",     sizeof(stat_rec.blocks  )   ,    block_no);
-        sprintf(stat_rec.size       , "%-*s",     sizeof(stat_rec.size    )   ,    mpsz2rnd(sizestr, size));
-        sprintf(stat_rec.used       , "%-*s",     sizeof(stat_rec.used    )   ,    mpsz2rnd(sizestr, used));
-        sprintf(stat_rec.used_prc   , "%%%-*.*f", sizeof(stat_rec.used_prc)   , 2, !size ? 0.0 : (double)(used/(long double)size) * 100);
-        sprintf(stat_rec.free       , "%-*s",     sizeof(stat_rec.free    )   ,    mpsz2rnd(sizestr, size - used));
-        sprintf(stat_rec.free_prc   , "%%%-*.*f", sizeof(stat_rec.free_prc) -1, 2, !size ? 0.0 : (double)((size - used)/(long double)size) * 100);
+        sprintf(stat_rec.mpid       , "%*d ",     (int) sizeof(stat_rec.mpid    ) -1,    i);
+        sprintf(stat_rec.descr      , "%-*.*s",   (int) sizeof(stat_rec.descr   )   , (int) sizeof(stat_rec.descr),  mp_arr[i].descr);
+        sprintf(stat_rec.blocks     , "%-*d",     (int) sizeof(stat_rec.blocks  )   ,    block_no);
+        sprintf(stat_rec.size       , "%-*s",     (int) sizeof(stat_rec.size    )   ,    mpsz2rnd(sizestr, size));
+        sprintf(stat_rec.used       , "%-*s",     (int) sizeof(stat_rec.used    )   ,    mpsz2rnd(sizestr, used));
+        sprintf(stat_rec.used_prc   , "%%%-*.*f", (int) sizeof(stat_rec.used_prc)   , 2, !size ? 0.0 : (double)(used/(long double)size) * 100);
+        sprintf(stat_rec.free       , "%-*s",     (int) sizeof(stat_rec.free    )   ,    mpsz2rnd(sizestr, size - used));
+        sprintf(stat_rec.free_prc   , "%%%-*.*f", (int) sizeof(stat_rec.free_prc) -1, 2, !size ? 0.0 : (double)((size - used)/(long double)size) * 100);
 
         mptrc(NULL, "%s", (char *)&stat_rec);
     }
@@ -170,14 +170,14 @@ void mpprn()
     /* Print out totals */
     memset(&stat_rec, 0x00, sizeof(stat_rec));
 
-    sprintf(stat_rec.mpid       , "%-*s",     sizeof(stat_rec.mpid    )   ,    "Total");
-    sprintf(stat_rec.descr      , "%-*s",     sizeof(stat_rec.descr   )   ,    "");
-    sprintf(stat_rec.blocks     , "%-*d",     sizeof(stat_rec.blocks  )   ,    tot_block_no);
-    sprintf(stat_rec.size       , "%-*s",     sizeof(stat_rec.size    )   ,    mpsz2rnd(sizestr, tot_size));
-    sprintf(stat_rec.used       , "%-*s",     sizeof(stat_rec.used    )   ,    mpsz2rnd(sizestr, tot_used));
-    sprintf(stat_rec.used_prc   , "%%%-*.*f", sizeof(stat_rec.used_prc)   , 2, !tot_size ? 0.0 : (double)(tot_used/(long double)tot_size) * 100);
-    sprintf(stat_rec.free       , "%-*s",     sizeof(stat_rec.free    )   ,    mpsz2rnd(sizestr, tot_size - tot_used));
-    sprintf(stat_rec.free_prc   , "%%%-*.*f", sizeof(stat_rec.free_prc) -1, 2, !tot_size ? 0.0 : (double)((tot_size - tot_used)/(long double)tot_size) * 100);
+    sprintf(stat_rec.mpid       , "%-*s",     (int) sizeof(stat_rec.mpid    )   ,    "Total");
+    sprintf(stat_rec.descr      , "%-*s",     (int) sizeof(stat_rec.descr   )   ,    "");
+    sprintf(stat_rec.blocks     , "%-*d",     (int) sizeof(stat_rec.blocks  )   ,    tot_block_no);
+    sprintf(stat_rec.size       , "%-*s",     (int) sizeof(stat_rec.size    )   ,    mpsz2rnd(sizestr, tot_size));
+    sprintf(stat_rec.used       , "%-*s",     (int) sizeof(stat_rec.used    )   ,    mpsz2rnd(sizestr, tot_used));
+    sprintf(stat_rec.used_prc   , "%%%-*.*f", (int) sizeof(stat_rec.used_prc)   , 2, !tot_size ? 0.0 : (double)(tot_used/(long double)tot_size) * 100);
+    sprintf(stat_rec.free       , "%-*s",     (int) sizeof(stat_rec.free    )   ,    mpsz2rnd(sizestr, tot_size - tot_used));
+    sprintf(stat_rec.free_prc   , "%%%-*.*f", (int) sizeof(stat_rec.free_prc) -1, 2, !tot_size ? 0.0 : (double)((tot_size - tot_used)/(long double)tot_size) * 100);
 
     mptrc(NULL, "%s", (char *)&stat_rec);
 

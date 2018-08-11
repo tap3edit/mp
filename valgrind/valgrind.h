@@ -38,5 +38,6 @@
 #define __VALGRIND_H
 
 #define MP_VALGRIND_NOT_AVAILABLE    1
+#pragma message("Compiling without the Valigrind extension")
 
 #endif   /* } __VALGRIND_H */

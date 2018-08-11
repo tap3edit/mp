@@ -2,7 +2,7 @@
 |*
 |* tap3edit Tools (http://www.tap3edit.com)
 |*
-|* $Id: mp.c 64 2015-01-24 22:48:52Z mrjones $
+|* $Id: mp.c 220 2018-08-11 12:57:27Z mrjones $
 |*
 |* Copyright (c) 2014, Javier Gutierrez <jgutierrez@tap3edit.com>
 |* 
@@ -46,6 +46,7 @@
 #include <errno.h>
 #include <valgrind/valgrind.h>
 #ifndef MP_VALGRIND_NOT_AVAILABLE /* { */
+#   pragma message("Compiled with the Valgrind extension")
 #   include <valgrind/memcheck.h>
 #endif /* } MP_VALGRIND_NOT_AVAILABLE */
 #include "mp.h"
@@ -76,8 +77,10 @@ static size_t volatile mp_blk_sz = MP_DEF_BLK_SZ;           /* Memory limit */
 /* Global variables */
 #if MP_THREAD_SAFE == 1
 MP_TLS_INT mperrno = 0;
+MP_TLS_CHAR *mperrstr = NULL;
 #else
 int  mperrno = 0;
+char *mperrstr = NULL;
 #endif
 
 mp mp_arr[MP_MAX_MP_ID -1];                                 /* Array of memory pools */
@@ -123,6 +126,10 @@ static void *mpadd_block(size_t size, int mpid, size_t alignment)
             /* Threads should aquire a new Memory Pool, so we assume
              * The thread calling the default one is the main thread */
             mp_arr[mpid].thread_id = MP_CURR_THREAD;
+#endif
+
+#ifndef MP_VALGRIND_NOT_AVAILABLE
+            VALGRIND_CREATE_MEMPOOL((void *)&mp_arr[mpid], 0, 1);
 #endif
         }
         else
@@ -176,20 +183,14 @@ static void *mpadd_block(size_t size, int mpid, size_t alignment)
         mperrno = MP_ERRNO_ALLO;
         return NULL;
     }
-
     new_block->size = block_size;
     new_block->used = alignment - ((uintptr_t)new_block->block % alignment);
     new_block->used = new_block->used == alignment ? 0 : new_block->used;
     chunk = new_block->block + new_block->used;
     new_block->used += size;
     new_block->next = NULL;
-
 #ifndef MP_VALGRIND_NOT_AVAILABLE
-    VALGRIND_CREATE_MEMPOOL(new_block->block, 0, 1);
-
     VALGRIND_MAKE_MEM_NOACCESS(new_block->block, new_block->size);
-
-    VALGRIND_MEMPOOL_ALLOC(new_block->block, chunk, size);
 #endif
 
     /* Attach new memory block to our memory pool */
@@ -246,6 +247,13 @@ static void *mpget_chunk(size_t size, int mpid, size_t alignment)
     if (mpid > MP_MAX_MP_ID -1 || mpid < 0)
     {
         mperrno = MP_ERRNO_MPID;
+        return NULL;
+    }
+
+    /* Memory pool ID not initiliazed */
+    if (mp_arr[mpid].init != 'Y' && mpid != MP_DEF_MP_ID)
+    {
+        mperrno = MP_ERRNO_NOIN;
         return NULL;
     }
 
@@ -310,13 +318,12 @@ static void *mpget_chunk(size_t size, int mpid, size_t alignment)
             /* No space in last memory block, creating new memory block */
             chunk = mpadd_block(size, mpid, alignment);
         }
-#ifndef MP_VALGRIND_NOT_AVAILABLE
-        else
-        {
-            VALGRIND_MEMPOOL_ALLOC(curr_block->block, chunk, size);
-        }
-#endif
+
     }
+
+#ifndef MP_VALGRIND_NOT_AVAILABLE
+    VALGRIND_MEMPOOL_ALLOC((void *)&mp_arr[mpid], chunk, size);
+#endif
 
     return chunk;
 }
@@ -527,7 +534,7 @@ void mpfree(void *ptr)
 void mpfree_mpid(void *ptr, int mpid)
 {
 #ifndef MP_VALGRIND_NOT_AVAILABLE
-    VALGRIND_MEMPOOL_FREE(mp_arr[mpid].tail_block, ptr);
+    VALGRIND_MEMPOOL_FREE((void *)&mp_arr[mpid], ptr);
 #endif
     return;
 }
@@ -853,6 +860,10 @@ int mpnew(char *descr)
             mp_arr[i].head_block = NULL;
             mp_arr[i].tail_block = NULL;
             mpid = i;
+
+#ifndef MP_VALGRIND_NOT_AVAILABLE
+            VALGRIND_CREATE_MEMPOOL((void *)&mp_arr[mpid], 0, 1);
+#endif
             break;
         }
     }
@@ -1064,9 +1075,6 @@ int mpdel(int mpid)
     {
         if (curr_block->block != NULL)
         {
-#ifndef MP_VALGRIND_NOT_AVAILABLE
-            VALGRIND_DESTROY_MEMPOOL(curr_block->block);
-#endif
             free(curr_block->block);
         }
         mpadd_tot_phy_mem(curr_block->size, -1); /* No need to check for error */
@@ -1075,6 +1083,10 @@ int mpdel(int mpid)
         free(temp_block);
     }
 
+#ifndef MP_VALGRIND_NOT_AVAILABLE
+    // VVALGRIND_MEMPOOL_TRIM((void *)&mp_arr[mpid], curr_block->block, 0);
+    VALGRIND_DESTROY_MEMPOOL((void *)&mp_arr[mpid]);
+#endif
     memset(&mp_arr[mpid], 0x00, sizeof(mp));
     mp_arr[mpid].head_block = NULL;
     mp_arr[mpid].tail_block = NULL;
@@ -1107,6 +1119,8 @@ int mpdel_all()
 
     for (i = 0; i < MP_MAX_MP_ID; i ++)
     {
+        if (mp_arr[i].init != 'Y')
+            continue;
 
         curr_block = mp_arr[i].head_block;
         while(curr_block != NULL)
@@ -1120,6 +1134,10 @@ int mpdel_all()
             free(temp_block);
         }
 
+#ifndef MP_VALGRIND_NOT_AVAILABLE
+        // VVALGRIND_MEMPOOL_TRIM((void *)&mp_arr[i], curr_block->block, 0);
+        VALGRIND_DESTROY_MEMPOOL((void *)&mp_arr[i]);
+#endif
         memset(&mp_arr[i], 0x00, sizeof(mp));
         mp_arr[i].head_block = NULL;
         mp_arr[i].tail_block = NULL;
@@ -1177,6 +1195,10 @@ int mpclr(int mpid)
         curr_block->used = 0;
         curr_block = curr_block->next;
     }
+
+#ifndef MP_VALGRIND_NOT_AVAILABLE
+    // VALGRIND_MEMPOOL_TRIM((void *)&mp_arr[mpid], curr_block->block, 0);
+#endif
 
     return MP_ERRNO_SUCCESS;
 }
@@ -1319,7 +1341,7 @@ char *mpstrerror()
         case MP_ERRNO_THRD:
             return MP_ERRSTR_THRD;
         case MP_ERRNO_SYSE:
-            return strerror(errno);
+            return strerror(errno); // TODO replace with reentrant
     }
 
     return "Error number not recognized";

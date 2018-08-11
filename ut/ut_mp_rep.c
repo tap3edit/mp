@@ -273,12 +273,12 @@ START_TEST(mpbin2hex_check_sz_less_thn_align_and_start_lss_thn_align)
 #line 230
     char hex[64] = "";
     char *hex_p = NULL;
-    uchar buff[16] = "";
+    uchar buff[32] = "";
     uchar *buff_p = NULL;
     char buff_str[] = "                     01        .";
     size_t align = 8;
 
-    buff_p = (uchar *)((uintptr_t)(buff + align -1) & ~(uintptr_t)(align -1));
+    buff_p = (uchar *)((uintptr_t)(buff + 10 + align -1) & ~(uintptr_t)(align -1));
     buff_p--;
     buff_p[0] = 0x01;
     buff_p[1] = 0x02;
@@ -305,12 +305,12 @@ START_TEST(mpbin2hex_check_sz_eq_align_and_start_lss_thn_align)
 #line 257
     char hex[64] = "";
     char *hex_p = NULL;
-    uchar buff[16] = "";
+    uchar buff[32] = "";
     uchar *buff_p = NULL;
     char buff_str[] = "                     01        .";
     size_t align = 8;
 
-    buff_p = (uchar *)((uintptr_t)(buff + align -1) & ~(uintptr_t)(align -1));
+    buff_p = (uchar *)((uintptr_t)(buff + 10 + align -1) & ~(uintptr_t)(align -1));
     buff_p--;
     buff_p[0] = 0x01;
     buff_p[1] = 0x02;
@@ -340,12 +340,12 @@ START_TEST(mpbin2hex_check_sz_grt_thn_align_and_start_lss_thn_align)
 #line 287
     char hex[64] = "";
     char *hex_p = NULL;
-    uchar buff[16] = "";
+    uchar buff[32] = "";
     uchar *buff_p = NULL;
     char buff_str[] = "                     01        .";
     size_t align = 8;
 
-    buff_p = (uchar *)((uintptr_t)(buff + align -1) & ~(uintptr_t)(align -1));
+    buff_p = (uchar *)((uintptr_t)(buff + 10 + align -1) & ~(uintptr_t)(align -1));
     buff_p--;
     buff_p[0] = 0x01;
     buff_p[1] = 0x02;
